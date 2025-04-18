@@ -1,19 +1,13 @@
 import React, {useEffect, useRef, useState} from 'react';
 import {
   View,
-  Text,
-  TouchableOpacity,
-  Image,
   BackHandler,
   Platform,
-  ScrollView,
-  SafeAreaView,
+  KeyboardAvoidingView,
 } from 'react-native';
-import {COLORS, IMAGES, RH} from '../../theme';
+import {COLORS, IMAGES, RH, FONTS, SIZES} from '../../theme';
 import {MMKV} from 'react-native-mmkv';
-import {heightPercentageToDP as hp} from 'react-native-responsive-screen';
 import {useIsFocused} from '@react-navigation/native';
-import styles from './styles';
 import {Button} from '../../components/Button/Button';
 import InputField from '../../components/InputField';
 
@@ -27,9 +21,7 @@ const Login = ({navigation}) => {
   // Dummy login function simulating an API call
 
   const handleLoginPress = async () => {
-
     navigation.navigate('Home');
-
 
     // const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     // if (!emailRegex.test(email)) {
@@ -78,50 +70,52 @@ const Login = ({navigation}) => {
   }, []);
 
   return (
-    <View style={{flex: 1, backgroundColor: COLORS.gray3, padding: 20}}>
-      <Text style={styles.welcomeText}>Welcome</Text>
-      <InputField
-        placeholder="Email"
-        label="Email"
-        iconType="Email"
-        isError={emailError}
-        value={email}
-        keyboardType="email-address"
-        onChangeText={value => {
-          setEmailError(false);
-          setEmail(value);
-        }}
-      />
-      <InputField
-        placeholder="Password"
-        label="Password"
-        iconType="Password"
-        isError={passwordError}
-        isSecure
-        secureField
-        value={password}
-        onChangeText={value => {
-          setPasswordError(false);
-          setPassword(value);
-        }}
-      />
-      <View style={styles.forgotPasswordContainer}>
-        <TouchableOpacity
-          onPress={() => {
-            console.log('ForgotPassword');
-            // navigation.navigate('ForgotPassword')
-          }}>
-          <Text style={styles.forgotPasswordText}>Forgot Password</Text>
-        </TouchableOpacity>
-      </View>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={{flex: 1, backgroundColor: COLORS.gray3, padding: RH(20)}}>
+      <View style={{flex: 1, justifyContent: 'center'}}>
+        <InputField
+          placeholder="Email"
+          label="Email"
+          iconType="Email"
+          isError={emailError}
+          value={email}
+          keyboardType="email-address"
+          onChangeText={value => {
+            setEmailError(false);
+            setEmail(value);
+          }}
+        />
+        <InputField
+          placeholder="Password"
+          label="Password"
+          iconType="Password"
+          isError={passwordError}
+          isSecure
+          secureField
+          value={password}
+          onChangeText={value => {
+            setPasswordError(false);
+            setPassword(value);
+          }}
+        />
 
-      <Button
-        onPress={handleLoginPress}
-        backgroundColor={COLORS.white}
-        btnTitle="Login"
-        fontColor={COLORS.black}
-      />
-    </View>
+        <Button
+          onPress={handleLoginPress}
+          backgroundColor={COLORS.primary}
+          btnTitle="Login"
+          fontColor={COLORS.white}
+          style={{
+            width: '100%',
+          }}
+          wrapperStyle={{marginTop: RH(20)}}
+          titleStyle={{
+            fontFamily: FONTS.PSB,
+            fontSize: SIZES.sm,
+          }}
+        />
+      </View>
+    </KeyboardAvoidingView>
   );
 };
 

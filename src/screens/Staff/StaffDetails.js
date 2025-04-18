@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, {useState, useMemo, useEffect} from 'react';
 import {
   View,
   Text,
@@ -8,94 +8,233 @@ import {
   ScrollView,
   Pressable,
   Keyboard,
+  Alert,
 } from 'react-native';
 import DatePicker from 'react-native-date-picker';
-import InputField from '../../components/InputField';
-import { COLORS, SIZES, FONTS, RH, RW } from '../../theme';
-
-// Sample transaction data for the staff
-const sampleTransactions = [
-  { id: 1, date: '2025-04-01', type: 'Salary', amount: 2000, description: 'April Salary' },
-  { id: 2, date: '2025-04-05', type: 'Advance', amount: 300, description: 'Advance Payment' },
-  { id: 3, date: '2025-04-10', type: 'Salary', amount: 2000, description: 'May Salary' },
-  { id: 4, date: '2025-04-15', type: 'Advance', amount: 400, description: 'Advance Payment' },
-  { id: 5, date: '2025-04-20', type: 'Salary', amount: 2000, description: 'June Salary' },
-];
-
-// Hardcoded staff details
-const staffInfo = {
-  name: 'Alice Smith',
-  contact: '123-456-7890',
-  address: '123 Apple Street, New York, NY',
-  salaryDate: '15', // day of month
-  salaryAmount: 2000,
-};
+import {COLORS, SIZES, FONTS, RH, RW} from '../../theme';
+import {
+  getFirestore,
+  doc,
+  getDoc,
+  collection,
+  addDoc,
+  onSnapshot,
+  query,
+  where,
+  orderBy,
+  updateDoc,
+  getDocs,
+} from '@react-native-firebase/firestore';
+import AddAdvanceModal from './AddAdvanceModal';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 // Helper function to format Date in DD-MM-YYYY
-const formatDate = (date) => {
+const formatDate = date => {
   if (!date) return '';
-  const day = ("0" + date.getDate()).slice(-2);
-  const month = ("0" + (date.getMonth() + 1)).slice(-2);
+  const day = ('0' + date.getDate()).slice(-2);
+  const month = ('0' + (date.getMonth() + 1)).slice(-2);
   const year = date.getFullYear();
   return `${day}-${month}-${year}`;
 };
 
 // Staff Info Modal Component
-const StaffInfoModal = ({ visible, onClose }) => {
+const StaffInfoModal = ({visible, onClose, staffInfo}) => {
   return (
     <Modal transparent visible={visible} animationType="fade">
-      <TouchableOpacity style={styles.modalOverlay} onPress={onClose}>
+      <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>Staff Details</Text>
-          <Text style={styles.modalText}>
-            <Text style={styles.modalLabel}>Name: </Text>
-            {staffInfo.name}
-          </Text>
-          <Text style={styles.modalText}>
-            <Text style={styles.modalLabel}>Contact: </Text>
-            {staffInfo.contact}
-          </Text>
-          <Text style={styles.modalText}>
-            <Text style={styles.modalLabel}>Address: </Text>
-            {staffInfo.address}
-          </Text>
-          <Text style={styles.modalText}>
-            <Text style={styles.modalLabel}>Salary Date: </Text>
-            {staffInfo.salaryDate}
-          </Text>
-          <Text style={styles.modalText}>
-            <Text style={styles.modalLabel}>Salary Amount: </Text>
-            {staffInfo.salaryAmount}
-          </Text>
-          <TouchableOpacity onPress={onClose} style={styles.modalCloseButton}>
-            <Text style={styles.modalCloseButtonText}>Close</Text>
-          </TouchableOpacity>
+          <View style={styles.modalHeader}>
+            <View style={styles.modalTitleContainer}>
+              <Icon name="account-details" size={SIZES.sm} color={COLORS.primary} />
+              <Text style={styles.modalTitle}>Staff Details</Text>
+            </View>
+            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+              <Icon name="close" size={SIZES.s} color={COLORS.black} />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.modalBody}>
+            <View style={styles.infoRow}>
+              <View style={styles.infoLabelContainer}>
+                <Icon name="account" size={SIZES.s} color={COLORS.primary} />
+                <Text style={styles.infoLabel}>Name</Text>
+              </View>
+              <Text style={styles.infoValue}>{staffInfo?.name}</Text>
+            </View>
+            <View style={styles.infoRow}>
+              <View style={styles.infoLabelContainer}>
+                <Icon name="phone" size={SIZES.s} color={COLORS.primary} />
+                <Text style={styles.infoLabel}>Contact</Text>
+              </View>
+              <Text style={styles.infoValue}>{staffInfo?.contact}</Text>
+            </View>
+            <View style={styles.infoRow}>
+              <View style={styles.infoLabelContainer}>
+                <Icon name="map-marker" size={SIZES.s} color={COLORS.primary} />
+                <Text style={styles.infoLabel}>Address</Text>
+              </View>
+              <Text style={styles.infoValue}>{staffInfo?.address}</Text>
+            </View>
+            <View style={styles.infoRow}>
+              <View style={styles.infoLabelContainer}>
+                <Icon name="calendar" size={SIZES.s} color={COLORS.primary} />
+                <Text style={styles.infoLabel}>Salary Date</Text>
+              </View>
+              <Text style={styles.infoValue}>{staffInfo?.salaryDate}</Text>
+            </View>
+            <View style={styles.infoRow}>
+              <View style={styles.infoLabelContainer}>
+                <Icon name="currency-inr" size={SIZES.s} color={COLORS.primary} />
+                <Text style={styles.infoLabel}>Salary Amount</Text>
+              </View>
+              <Text style={styles.infoValue}>₹{staffInfo?.salaryAmount}</Text>
+            </View>
+          </View>
         </View>
-      </TouchableOpacity>
+      </View>
     </Modal>
   );
 };
 
-const StaffDetails = () => {
-  // State for type filter (Salary or Advance)
+const StaffDetails = ({route}) => {
+  const {employeeId} = route.params;
+  console.log('StaffDetails mounted with employeeId:', employeeId);
+
   const [typeFilter, setTypeFilter] = useState('');
-  // Start and End dates are null by default (no date selected)
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
   const [openStart, setOpenStart] = useState(false);
   const [openEnd, setOpenEnd] = useState(false);
-  // Control modal visibility
   const [infoModalVisible, setInfoModalVisible] = useState(false);
+  const [staffInfo, setStaffInfo] = useState(null);
+  const [transactions, setTransactions] = useState([]);
+  const [newAdvanceDate, setNewAdvanceDate] = useState(new Date());
+  const [newAdvanceAmount, setNewAdvanceAmount] = useState('');
+  const [showAdvanceModal, setShowAdvanceModal] = useState(false);
 
-  // Filter transactions based on type and date range
+  useEffect(() => {
+    if (!employeeId) {
+      console.log('No employeeId provided');
+      Alert.alert('Error', 'No employee selected');
+      return;
+    }
+
+    const db = getFirestore();
+    const employeeRef = doc(db, 'employees', employeeId);
+    console.log('Fetching employee details for ID:', employeeId);
+
+    const getEmployeeDetails = async () => {
+      try {
+        const docSnap = await getDoc(employeeRef);
+        console.log('Employee document snapshot:', docSnap);
+
+        if (docSnap && docSnap.data) {
+          const data = docSnap.data();
+          console.log('Employee data:', data);
+          setStaffInfo(data);
+
+          // Add automatic salary entry if it's salary date
+          const today = new Date();
+          const salaryDate = parseInt(data.salaryDate);
+
+          if (today.getDate() === salaryDate) {
+            const transactionsRef = collection(db, 'transactions');
+            const salaryQuery = query(
+              transactionsRef,
+              where('employeeId', '==', employeeId),
+              where('type', '==', 'Salary'),
+              where(
+                'date',
+                '>=',
+                new Date(today.getFullYear(), today.getMonth(), 1),
+              ),
+              where(
+                'date',
+                '<=',
+                new Date(today.getFullYear(), today.getMonth() + 1, 0),
+              ),
+            );
+
+            const salarySnapshot = await getDocs(salaryQuery);
+            if (salarySnapshot.empty) {
+              // Add salary transaction if not already added this month
+              await addDoc(transactionsRef, {
+                employeeId,
+                type: 'Salary',
+                amount: data.salaryAmount,
+                date: today,
+                createdAt: new Date(),
+              });
+            }
+          }
+        } else {
+          console.log('No employee found with ID:', employeeId);
+          Alert.alert('Error', 'Employee not found');
+        }
+      } catch (error) {
+        console.error('Error fetching employee details:', error);
+        Alert.alert('Error', 'Failed to fetch employee details');
+      }
+    };
+
+    getEmployeeDetails();
+
+    // Set up transactions listener
+    const transactionsRef = collection(db, 'transactions');
+    const q = query(
+      transactionsRef,
+      where('employeeId', '==', employeeId),
+      orderBy('date', 'desc'),
+    );
+
+    const unsubscribe = onSnapshot(
+      q,
+      snapshot => {
+        try {
+          if (!snapshot) {
+            console.log('No snapshot available for transactions');
+            setTransactions([]);
+            return;
+          }
+
+          const transactionList = [];
+          snapshot.docs.forEach(docData => {
+            const data = docData.data();
+            console.log('Transaction data:', data);
+            transactionList.push({
+              id: docData.id,
+              ...data,
+            });
+          });
+          console.log('Updated transactions list:', transactionList);
+          setTransactions(transactionList);
+        } catch (error) {
+          console.error('Error processing transactions snapshot:', error);
+          setTransactions([]);
+        }
+      },
+      error => {
+        console.error('Error in transactions onSnapshot:', error);
+        Alert.alert('Error', 'Failed to fetch transactions');
+      },
+    );
+
+    return () => {
+      console.log('Cleaning up StaffDetails listeners');
+      unsubscribe();
+    };
+  }, [employeeId]);
+
+
   const filteredTransactions = useMemo(() => {
-    return sampleTransactions.filter(item => {
-      // Filter by type, if a filter is set
-      if (typeFilter && !item.type.toLowerCase().includes(typeFilter.toLowerCase())) {
+    return transactions.filter(item => {
+      if (
+        typeFilter &&
+        !item.type.toLowerCase().includes(typeFilter.toLowerCase())
+      ) {
         return false;
       }
-      // Convert the transaction's date string to a Date object
-      const transactionDate = new Date(item.date);
+      const transactionDate = item.date.toDate();
       if (startDate !== null && transactionDate < startDate) {
         return false;
       }
@@ -104,45 +243,50 @@ const StaffDetails = () => {
       }
       return true;
     });
-  }, [typeFilter, startDate, endDate]);
+  }, [transactions, typeFilter, startDate, endDate]);
 
   return (
     <Pressable onPress={() => Keyboard.dismiss()} style={styles.container}>
       {/* Header with Staff Name and Info Icon */}
       <View style={styles.headerRow}>
-        <Text style={styles.staffName}>{staffInfo.name}</Text>
-        <TouchableOpacity onPress={() => setInfoModalVisible(true)} style={styles.infoIcon}>
-          <Text style={styles.infoIconText}>ℹ️</Text>
+        <Text style={styles.staffName}>{staffInfo?.name}</Text>
+        <TouchableOpacity
+          onPress={() => setInfoModalVisible(true)}
+          style={styles.infoIcon}>
+          <Icon name="information" size={RW(40)} color={COLORS.white} />
         </TouchableOpacity>
       </View>
 
       {/* Filter Section: Two type filter buttons and two date picker buttons in one row */}
       <View style={styles.filterRow}>
         <TouchableOpacity
-          style={[styles.filterButton, typeFilter === 'Salary' && styles.activeFilter]}
+          style={[
+            styles.filterButton,
+            typeFilter === 'Salary' && styles.activeFilter,
+          ]}
           onPress={() => {
             setTypeFilter(typeFilter === 'Salary' ? '' : 'Salary');
             Keyboard.dismiss();
-          }}
-        >
+          }}>
           <Text style={styles.filterButtonText}>S</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.filterButton, typeFilter === 'Advance' && styles.activeFilter]}
+          style={[
+            styles.filterButton,
+            typeFilter === 'Advance' && styles.activeFilter,
+          ]}
           onPress={() => {
             setTypeFilter(typeFilter === 'Advance' ? '' : 'Advance');
             Keyboard.dismiss();
-          }}
-        >
-          <Text style={styles.filterButtonText}>D</Text>
+          }}>
+          <Text style={styles.filterButtonText}>A</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.datePickerButton}
           onPress={() => {
             Keyboard.dismiss();
             setOpenStart(true);
-          }}
-        >
+          }}>
           <Text style={styles.datePickerText}>
             {startDate ? formatDate(startDate) : 'Start Date'}
           </Text>
@@ -152,8 +296,7 @@ const StaffDetails = () => {
           onPress={() => {
             Keyboard.dismiss();
             setOpenEnd(true);
-          }}
-        >
+          }}>
           <Text style={styles.datePickerText}>
             {endDate ? formatDate(endDate) : 'End Date'}
           </Text>
@@ -166,7 +309,6 @@ const StaffDetails = () => {
         <Text style={[styles.tableCell, styles.headerCell]}>Date</Text>
         <Text style={[styles.tableCell, styles.headerCell]}>Type</Text>
         <Text style={[styles.tableCell, styles.headerCell]}>Amount</Text>
-        <Text style={[styles.tableCell, styles.headerCell]}>Description</Text>
       </View>
 
       {/* Table Rows */}
@@ -174,30 +316,47 @@ const StaffDetails = () => {
         {filteredTransactions.map((item, index) => (
           <TouchableOpacity
             key={item.id}
-            onPress={() => {}}
             style={[
               styles.tableRow,
               index % 2 === 0 ? styles.rowEven : styles.rowOdd,
-            ]}
-          >
+            ]}>
             <Text style={styles.tableCell}>{index + 1}</Text>
-            <Text style={styles.tableCell}>{formatDate(new Date(item.date))}</Text>
+            <Text style={styles.tableCell}>
+              {formatDate(item.date.toDate())}
+            </Text>
             <Text style={styles.tableCell}>{item.type}</Text>
             <Text style={styles.tableCell}>{item.amount}</Text>
-            <Text style={styles.tableCell}>{item.description}</Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
 
+      {/* Add Advance Button */}
+      <TouchableOpacity
+        style={styles.addButton}
+        onPress={() => setShowAdvanceModal(true)}>
+        <Text style={styles.addButtonText}>+</Text>
+      </TouchableOpacity>
+
       {/* Staff Info Modal */}
-      <StaffInfoModal visible={infoModalVisible} onClose={() => setInfoModalVisible(false)} />
+      <StaffInfoModal
+        visible={infoModalVisible}
+        onClose={() => setInfoModalVisible(false)}
+        staffInfo={staffInfo}
+      />
+
+      {/* Add Advance Modal */}
+      <AddAdvanceModal
+        visible={showAdvanceModal}
+        onClose={() => setShowAdvanceModal(false)}
+        employeeId={employeeId}
+      />
 
       {/* Date Pickers for Start and End Dates */}
       <DatePicker
         modal
         open={openStart}
         date={startDate || new Date()}
-        onConfirm={(date) => {
+        onConfirm={date => {
           setOpenStart(false);
           setStartDate(date);
         }}
@@ -210,7 +369,7 @@ const StaffDetails = () => {
         modal
         open={openEnd}
         date={endDate || new Date()}
-        onConfirm={(date) => {
+        onConfirm={date => {
           setOpenEnd(false);
           setEndDate(date);
         }}
@@ -243,14 +402,13 @@ const styles = StyleSheet.create({
   infoIcon: {
     backgroundColor: COLORS.primary,
     borderRadius: RW(20),
-    width: RW(40),
-    height: RW(40),
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  infoIconText: {
-    fontSize: RW(20),
-    color: COLORS.white,
+    elevation: 3,
+    shadowColor: COLORS.black,
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
   filterRow: {
     flexDirection: 'row',
@@ -328,43 +486,129 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: COLORS.transparent,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalContent: {
     backgroundColor: COLORS.white,
-    borderRadius: RW(8),
-    padding: RW(16),
-    width: '80%',
+    borderRadius: RW(16),
+    width: '90%',
+    maxWidth: RW(400),
+    elevation: 5,
+    shadowColor: COLORS.black,
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    padding: RW(20),
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.gray3,
+  },
+  modalTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: RW(8),
   },
   modalTitle: {
     fontFamily: FONTS.PB,
-    fontSize: RW(18),
-    marginBottom: RH(12),
+    fontSize: SIZES.sl,
     color: COLORS.black,
   },
-  modalText: {
+  closeButton: {
+    width: RW(30),
+    height: RW(30),
+    borderRadius: RW(15),
+    backgroundColor: COLORS.gray3,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalBody: {
+    paddingHorizontal: RW(20),
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: RH(12),
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.gray3,
+  },
+  infoLabelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: RW(8),
+    flex: 0.4,
+  },
+  infoLabel: {
     fontFamily: FONTS.PR,
-    fontSize: RW(14),
+    fontSize: SIZES.s,
+    color: COLORS.gray2,
+  },
+  infoValue: {
+    fontFamily: FONTS.PB,
+    fontSize: SIZES.s,
     color: COLORS.black,
-    marginBottom: RH(4),
+    flex: 0.6,
+    textAlign: 'right',
   },
-  modalLabel: {
-    fontFamily: FONTS.PB,
+  modalBodyRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: RH(20),
   },
-  modalCloseButton: {
+  // Each section in the row (date picker and amount input)
+  modalSection: {
+    flex: 1,
+    marginHorizontal: RW(4),
+  },
+  amountInputContainer: {
+    width: '100%',
+  },
+  amountInput: {
+    width: '100%',
+  },
+  modalButtonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginTop: RH(16),
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: RW(16),
-    paddingVertical: RH(8),
-    borderRadius: RW(4),
   },
-  modalCloseButtonText: {
-    fontFamily: FONTS.PB,
-    fontSize: RW(14),
+  modalButton: {
+    flex: 1,
+    marginHorizontal: RW(8),
+  },
+  cancelButton: {
+    borderWidth: 1,
+    borderColor: COLORS.gray3,
+  },
+  addButton: {
+    position: 'absolute',
+    bottom: RH(20),
+    right: RW(20),
+    width: RW(50),
+    height: RW(50),
+    borderRadius: RW(25),
+    backgroundColor: COLORS.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 5,
+    shadowColor: COLORS.black,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  addButtonText: {
     color: COLORS.white,
+    fontSize: SIZES.xl,
+    fontFamily: FONTS.PB,
   },
 });
 

@@ -1,14 +1,13 @@
 import {useNavigation} from '@react-navigation/native';
 import React from 'react';
 import {Animated, Text, TouchableOpacity, View} from 'react-native';
-
-import {COLORS} from '../../theme';
-
+import {COLORS, FONTS, SIZES, RH} from '../../theme';
 import styles from './styles';
 
 export const AppButton = props => {
   const animatedButtonScale = new Animated.Value(1);
-  // When button is pressed in, animate the scale to 1.030
+
+  // When button is pressed in, animate the scale to 1.03
   const onPressIn = () => {
     Animated.spring(animatedButtonScale, {
       toValue: 1.03,
@@ -36,20 +35,36 @@ export const AppButton = props => {
       style={[
         {
           backgroundColor: props.buttonColor ?? COLORS.white,
+          paddingVertical: RH(12),
+          paddingHorizontal: RH(20),
+          borderRadius: RH(8),
+          elevation: 3,
+          shadowColor: COLORS.black,
+          shadowOffset: {width: 0, height: 2},
+          shadowOpacity: 0.25,
+          shadowRadius: 3.84,
+          width: '100%',
+          alignItems: 'center',
         },
-        {borderRadius: props?.buttonBorderRadius},
         {opacity: props?.isDisabled ? 0.4 : 1},
-        styles.buttonStyle,
         props.buttonStyle,
         animatedScaleStyle,
       ]}
       onPressIn={onPressIn}
       onPressOut={onPressOut}
       onPress={props.onPress}>
-      {/* <View style={[styles.btnWrapper, props.btnWrapperStyle]}>
-        {renderContent()}
-      </View> */}
-      <Text>{props.title}</Text>
+      <Text
+        style={[
+          {
+            color: props.textColor,
+            fontFamily: FONTS.PSB,
+            fontSize: SIZES.sm,
+            textAlign: 'center',
+          },
+          props.titleStyle,
+        ]}>
+        {props.title}
+      </Text>
     </TouchableOpacity>
   );
 };
@@ -61,11 +76,14 @@ export const Button = ({
   isLoading = false,
   backgroundColor = COLORS.white,
   fontColor = COLORS.black,
+  titleStyle,
+  wrapperStyle,
 }) => {
   const navigation = useNavigation();
 
   return (
-    <View style={styles.buttonWithArrowWrapper}>
+    <View
+      style={[styles.buttonWithArrowWrapper, {width: '100%'}, wrapperStyle]}>
       <AppButton
         isLoading={isLoading}
         isDisabled={isDisabled}
@@ -76,6 +94,7 @@ export const Button = ({
         buttonStyle={{alignItems: 'center'}}
         title={btnTitle}
         textColor={fontColor}
+        titleStyle={titleStyle}
       />
     </View>
   );

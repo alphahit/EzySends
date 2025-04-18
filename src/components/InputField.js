@@ -1,12 +1,12 @@
-import React, { useState } from "react";
-import { View, Text, TextInput, StyleSheet, Pressable } from "react-native";
-import { COLORS, FONTS, Icons, RH, RW, SIZES } from "../theme";
+import React, {useState} from 'react';
+import {View, Text, TextInput, StyleSheet, Pressable} from 'react-native';
+import {COLORS, FONTS, Icons, RH, RW, SIZES} from '../theme';
 
 const InputField = ({
-  value = "",
-  iconType = "Email",
-  placeholder = "",
-  label = "",
+  value = '',
+  iconType = 'Email',
+  placeholder = '',
+  label = '',
   isSecure = false,
   secureField = false,
   onChangeText = () => {},
@@ -14,40 +14,45 @@ const InputField = ({
   onBlur = () => {},
   isError = false,
   style = {},
-  keyboardType = "default",
+  keyboardType = 'default',
+  labelStyle = {},
+  inputStyle = {},
+  inputHeight = RH(48),
 }) => {
   const [secureEntry, setSecureEntry] = useState(isSecure);
 
   const localStyles = StyleSheet.create({
     wrapper: {
-   //
+      //
     },
     label: {
-      color: COLORS.white,
+      color: COLORS.black,
       fontSize: RW(13),
-      fontWeight: "500",
+      fontWeight: '500',
       marginBottom: RH(4),
+      ...labelStyle,
     },
     container: {
-      alignItems: "center",
+      alignItems: 'center',
       backgroundColor: COLORS.lightGray,
       borderColor: isError ? COLORS.dangerDark : COLORS.gray3,
       borderRadius: RW(5),
       borderWidth: RW(1.5),
-      flexDirection: "row",
-      height: RH(48),
+      flexDirection: 'row',
+      height: inputHeight,
       paddingHorizontal: RW(12),
     },
     inputContainer: {
-      alignItems: "center",
-      flexDirection: "row",
+      alignItems: 'center',
+      flexDirection: 'row',
       flex: 1,
     },
     input: {
       color: COLORS.darkBlack,
       flex: 1,
       fontSize: SIZES.sl,
-      fontWeight: "600",
+      fontWeight: '600',
+      ...inputStyle,
     },
     spaceRight: {
       marginRight: RW(12),
@@ -56,7 +61,9 @@ const InputField = ({
 
   return (
     <View style={[localStyles.wrapper, style.wrapper]}>
-      {label ? <Text style={[localStyles.label, style.label]}>{label}</Text> : null}
+      {label ? (
+        <Text style={[localStyles.label, style.label]}>{label}</Text>
+      ) : null}
       <View style={localStyles.container}>
         <View style={[localStyles.inputContainer, style.inputContainer]}>
           <TextInput
