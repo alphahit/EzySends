@@ -24,9 +24,11 @@ import {
   orderBy,
   updateDoc,
   getDocs,
+  deleteDoc,
 } from '@react-native-firebase/firestore';
 import AddAdvanceModal from './AddAdvanceModal';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useNavigation } from '@react-navigation/native';
 
 // Helper function to format Date in DD-MM-YYYY
 const formatDate = date => {
@@ -38,61 +40,117 @@ const formatDate = date => {
 };
 
 // Staff Info Modal Component
-const StaffInfoModal = ({visible, onClose, staffInfo}) => {
-  return (
-    <Modal transparent visible={visible} animationType="fade">
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <View style={styles.modalTitleContainer}>
-              <Icon name="account-details" size={SIZES.sm} color={COLORS.primary} />
-              <Text style={styles.modalTitle}>Staff Details</Text>
-            </View>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Icon name="close" size={SIZES.s} color={COLORS.black} />
-            </TouchableOpacity>
-          </View>
+const StaffInfoModal = ({visible, onClose, staffInfo, navigation, employeeId}) => {
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
-          <View style={styles.modalBody}>
-            <View style={styles.infoRow}>
-              <View style={styles.infoLabelContainer}>
-                <Icon name="account" size={SIZES.s} color={COLORS.primary} />
-                <Text style={styles.infoLabel}>Name</Text>
+  const handleEdit = () => {
+    onClose();
+    navigation.navigate('EditEmployee', {
+      employeeId,
+      employeeData: staffInfo,
+    });
+  };
+
+  const handleDelete = async () => {
+    try {
+      const db = getFirestore();
+      const employeeRef = doc(db, 'employees', employeeId);
+      await deleteDoc(employeeRef);
+      Alert.alert('Success', 'Employee deleted successfully!');
+      navigation.goBack();
+    } catch (error) {
+      console.error('Error deleting employee:', error);
+      Alert.alert('Error', 'Failed to delete employee.');
+    }
+  };
+
+  return (
+    <>
+      <Modal transparent visible={visible} animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <View style={styles.modalTitleContainer}>
+                <Icon name="account-details" size={SIZES.sm} color={COLORS.primary} />
+                <Text style={styles.modalTitle}>Staff Details</Text>
               </View>
-              <Text style={styles.infoValue}>{staffInfo?.name}</Text>
+              <View style={styles.modalActions}>
+                <TouchableOpacity onPress={handleEdit} style={styles.actionButton}>
+                  <Icon name="pencil" size={SIZES.s} color={COLORS.primary} />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setShowDeleteModal(true)} style={styles.actionButton}>
+                  <Icon name="delete" size={SIZES.s} color={COLORS.error} />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                  <Icon name="close" size={SIZES.s} color={COLORS.black} />
+                </TouchableOpacity>
+              </View>
             </View>
-            <View style={styles.infoRow}>
-              <View style={styles.infoLabelContainer}>
-                <Icon name="phone" size={SIZES.s} color={COLORS.primary} />
-                <Text style={styles.infoLabel}>Contact</Text>
+            <View style={styles.modalBody}>
+              <View style={styles.infoRow}>
+                <View style={styles.infoLabelContainer}>
+                  <Icon name="account" size={SIZES.s} color={COLORS.primary} />
+                  <Text style={styles.infoLabel}>Name</Text>
+                </View>
+                <Text style={styles.infoValue}>{staffInfo?.name}</Text>
               </View>
-              <Text style={styles.infoValue}>{staffInfo?.contact}</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <View style={styles.infoLabelContainer}>
-                <Icon name="map-marker" size={SIZES.s} color={COLORS.primary} />
-                <Text style={styles.infoLabel}>Address</Text>
+              <View style={styles.infoRow}>
+                <View style={styles.infoLabelContainer}>
+                  <Icon name="phone" size={SIZES.s} color={COLORS.primary} />
+                  <Text style={styles.infoLabel}>Contact</Text>
+                </View>
+                <Text style={styles.infoValue}>{staffInfo?.contact}</Text>
               </View>
-              <Text style={styles.infoValue}>{staffInfo?.address}</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <View style={styles.infoLabelContainer}>
-                <Icon name="calendar" size={SIZES.s} color={COLORS.primary} />
-                <Text style={styles.infoLabel}>Salary Date</Text>
+              <View style={styles.infoRow}>
+                <View style={styles.infoLabelContainer}>
+                  <Icon name="map-marker" size={SIZES.s} color={COLORS.primary} />
+                  <Text style={styles.infoLabel}>Address</Text>
+                </View>
+                <Text style={styles.infoValue}>{staffInfo?.address}</Text>
               </View>
-              <Text style={styles.infoValue}>{staffInfo?.salaryDate}</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <View style={styles.infoLabelContainer}>
-                <Icon name="currency-inr" size={SIZES.s} color={COLORS.primary} />
-                <Text style={styles.infoLabel}>Salary Amount</Text>
+              <View style={styles.infoRow}>
+                <View style={styles.infoLabelContainer}>
+                  <Icon name="calendar" size={SIZES.s} color={COLORS.primary} />
+                  <Text style={styles.infoLabel}>Salary Date</Text>
+                </View>
+                <Text style={styles.infoValue}>{staffInfo?.salaryDate}</Text>
               </View>
-              <Text style={styles.infoValue}>₹{staffInfo?.salaryAmount}</Text>
+              <View style={styles.infoRow}>
+                <View style={styles.infoLabelContainer}>
+                  <Icon name="currency-inr" size={SIZES.s} color={COLORS.primary} />
+                  <Text style={styles.infoLabel}>Salary Amount</Text>
+                </View>
+                <Text style={styles.infoValue}>₹{staffInfo?.salaryAmount}</Text>
+              </View>
             </View>
           </View>
         </View>
-      </View>
-    </Modal>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal transparent visible={showDeleteModal} animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.confirmationModalContent}>
+            <Text style={styles.confirmationTitle}>Delete Employee</Text>
+            <Text style={styles.confirmationMessage}>
+              Are you sure you want to delete this employee? This action cannot be undone.
+            </Text>
+            <View style={styles.confirmationButtons}>
+              <TouchableOpacity
+                style={[styles.confirmationButton, styles.cancelButton]}
+                onPress={() => setShowDeleteModal(false)}>
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.confirmationButton, styles.deleteButton]}
+                onPress={handleDelete}>
+                <Text style={styles.deleteButtonText}>Delete</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </>
   );
 };
 
@@ -112,12 +170,14 @@ const StaffDetails = ({route}) => {
   const [newAdvanceAmount, setNewAdvanceAmount] = useState('');
   const [showAdvanceModal, setShowAdvanceModal] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState(null);
+  const [showTransactionActions, setShowTransactionActions] = useState(false);
 
   const handleFilterSelect = (filter) => {
     setTypeFilter(filter);
     setShowFilterModal(false);
   };
-
+  const navigation = useNavigation();
   useEffect(() => {
     if (!employeeId) {
       console.log('No employeeId provided');
@@ -251,6 +311,31 @@ const StaffDetails = ({route}) => {
     });
   }, [transactions, typeFilter, startDate, endDate]);
 
+  const handleLongPress = (transaction) => {
+    setSelectedTransaction(transaction);
+    setShowTransactionActions(true);
+  };
+
+  const handleDeleteTransaction = async () => {
+    try {
+      const db = getFirestore();
+      const transactionRef = doc(db, 'transactions', selectedTransaction.id);
+      await deleteDoc(transactionRef);
+      Alert.alert('Success', 'Transaction deleted successfully!');
+      setShowTransactionActions(false);
+    } catch (error) {
+      console.error('Error deleting transaction:', error);
+      Alert.alert('Error', 'Failed to delete transaction.');
+    }
+  };
+
+  const handleEditTransaction = () => {
+    setShowTransactionActions(false);
+    setShowAdvanceModal(true);
+    setNewAdvanceDate(selectedTransaction.date.toDate());
+    setNewAdvanceAmount(selectedTransaction.amount.toString());
+  };
+
   return (
     <Pressable onPress={() => Keyboard.dismiss()} style={styles.container}>
       {/* Header with Staff Name and Info Icon */}
@@ -373,7 +458,8 @@ const StaffDetails = ({route}) => {
             style={[
               styles.tableRow,
               index % 2 === 0 ? styles.rowEven : styles.rowOdd,
-            ]}>
+            ]}
+            onLongPress={() => handleLongPress(item)}>
             <Text style={styles.tableCell}>{index + 1}</Text>
             <Text style={styles.tableCell}>
               {formatDate(item.date.toDate())}
@@ -396,14 +482,46 @@ const StaffDetails = ({route}) => {
         visible={infoModalVisible}
         onClose={() => setInfoModalVisible(false)}
         staffInfo={staffInfo}
+        navigation={navigation}
+        employeeId={employeeId}
       />
 
       {/* Add Advance Modal */}
       <AddAdvanceModal
         visible={showAdvanceModal}
-        onClose={() => setShowAdvanceModal(false)}
+        onClose={() => {
+          setShowAdvanceModal(false);
+          setSelectedTransaction(null);
+        }}
         employeeId={employeeId}
+        transactionToEdit={selectedTransaction}
       />
+
+      {/* Transaction Actions Modal */}
+      <Modal transparent visible={showTransactionActions} animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.transactionActionsModal}>
+            <TouchableOpacity
+              style={styles.transactionActionButton}
+              onPress={handleEditTransaction}>
+              <Icon name="pencil" size={SIZES.s} color={COLORS.primary} />
+              <Text style={styles.transactionActionText}>Edit Transaction</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.transactionActionButton}
+              onPress={handleDeleteTransaction}>
+              <Icon name="delete" size={SIZES.s} color={COLORS.error} />
+              <Text style={styles.transactionActionText}>Delete Transaction</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.transactionActionButton}
+              onPress={() => setShowTransactionActions(false)}>
+              <Icon name="close" size={SIZES.s} color={COLORS.black} />
+              <Text style={styles.transactionActionText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {/* Date Pickers for Start and End Dates */}
       <DatePicker
@@ -600,6 +718,19 @@ const styles = StyleSheet.create({
     fontSize: SIZES.sl,
     color: COLORS.black,
   },
+  modalActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: RW(8),
+  },
+  actionButton: {
+    width: RW(30),
+    height: RW(30),
+    borderRadius: RW(15),
+    backgroundColor: COLORS.gray3,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   closeButton: {
     width: RW(30),
     height: RW(30),
@@ -664,8 +795,7 @@ const styles = StyleSheet.create({
     marginHorizontal: RW(8),
   },
   cancelButton: {
-    borderWidth: 1,
-    borderColor: COLORS.gray3,
+    backgroundColor: COLORS.gray3,
   },
   addButton: {
     position: 'absolute',
@@ -690,6 +820,74 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontSize: SIZES.xl,
     fontFamily: FONTS.PB,
+  },
+  confirmationModalContent: {
+    backgroundColor: COLORS.white,
+    borderRadius: RW(16),
+    padding: RW(20),
+    width: '80%',
+    maxWidth: RW(400),
+    elevation: 5,
+  },
+  confirmationTitle: {
+    fontFamily: FONTS.PB,
+    fontSize: SIZES.sl,
+    color: COLORS.black,
+    marginBottom: RH(12),
+  },
+  confirmationMessage: {
+    fontFamily: FONTS.PR,
+    fontSize: SIZES.s,
+    color: COLORS.gray2,
+    marginBottom: RH(20),
+  },
+  confirmationButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: RW(12),
+    marginTop: RH(20),
+  },
+  confirmationButton: {
+    paddingVertical: RH(8),
+    paddingHorizontal: RW(16),
+    borderRadius: RW(4),
+    minWidth: RW(80),
+    alignItems: 'center',
+  },
+  deleteButton: {
+    backgroundColor: 'red',
+  },
+  cancelButtonText: {
+    fontFamily: FONTS.PR,
+    fontSize: SIZES.s,
+    color: COLORS.black,
+  },
+  deleteButtonText: {
+    fontFamily: FONTS.PR,
+    fontSize: SIZES.s,
+    color: COLORS.white,
+  },
+  transactionActionsModal: {
+    backgroundColor: COLORS.white,
+    borderRadius: RW(16),
+    padding: RW(20),
+    width: '80%',
+    maxWidth: RW(400),
+    elevation: 5,
+  },
+  transactionActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: RH(12),
+    paddingHorizontal: RW(16),
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.gray3,
+  },
+  transactionActionText: {
+    fontFamily: FONTS.PR,
+    fontSize: SIZES.s,
+    color: COLORS.black,
+    marginLeft: RW(12),
   },
 });
 

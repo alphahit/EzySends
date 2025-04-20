@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   View,
   Text,
@@ -21,10 +21,27 @@ import {
   updateDoc,
 } from '@react-native-firebase/firestore';
 
-const AddAdvanceModal = ({visible, onClose, employeeId}) => {
-  const [newAdvanceDate, setNewAdvanceDate] = useState(new Date());
-  const [newAdvanceAmount, setNewAdvanceAmount] = useState('');
-  const [transactionType, setTransactionType] = useState('advance');
+const AddAdvanceModal = ({visible, onClose, employeeId, transactionToEdit}) => {
+  const [newAdvanceDate, setNewAdvanceDate] = useState(transactionToEdit?.date?.toDate() || new Date());
+  const [newAdvanceAmount, setNewAdvanceAmount] = useState(
+    transactionToEdit ? Math.abs(transactionToEdit.amount).toString() : ''
+  );
+  const [transactionType, setTransactionType] = useState(
+    transactionToEdit ? (transactionToEdit.amount > 0 ? 'advance' : 'return') : 'advance'
+  );
+
+  // Reset form when modal is opened/closed
+  useEffect(() => {
+    if (visible && transactionToEdit) {
+      setNewAdvanceDate(transactionToEdit.date.toDate());
+      setNewAdvanceAmount(Math.abs(transactionToEdit.amount).toString());
+      setTransactionType(transactionToEdit.amount > 0 ? 'advance' : 'return');
+    } else if (!visible) {
+      setNewAdvanceDate(new Date());
+      setNewAdvanceAmount('');
+      setTransactionType('advance');
+    }
+  }, [visible, transactionToEdit]);
 
   const handleTransaction = async () => {
     if (!newAdvanceAmount) {
@@ -37,29 +54,29 @@ const AddAdvanceModal = ({visible, onClose, employeeId}) => {
       const transactionsRef = collection(db, 'transactions');
       const amount = parseFloat(newAdvanceAmount);
 
-      await addDoc(transactionsRef, {
-        employeeId,
-        type: transactionType === 'advance' ? 'Advance' : 'Return',
-        amount: transactionType === 'advance' ? amount : -amount,
-        date: newAdvanceDate,
-        createdAt: new Date(),
-      });
-
-      const employeeRef = doc(db, 'employees', employeeId);
-      const employeeDoc = await getDoc(employeeRef);
-      const currentTotalAdvance = employeeDoc.data().totalAdvance || 0;
-      
-      const newTotalAdvance = transactionType === 'advance' 
-        ? currentTotalAdvance + amount 
-        : Math.max(0, currentTotalAdvance - amount);
-
-      await updateDoc(employeeRef, {
-        totalAdvance: newTotalAdvance,
-      });
+      if (transactionToEdit) {
+        // Update existing transaction
+        const transactionRef = doc(db, 'transactions', transactionToEdit.id);
+        await updateDoc(transactionRef, {
+          type: transactionType === 'advance' ? 'Advance' : 'Return',
+          amount: transactionType === 'advance' ? amount : -amount,
+          date: newAdvanceDate,
+        });
+        Alert.alert('Success', 'Transaction updated successfully!');
+      } else {
+        // Add new transaction
+        await addDoc(transactionsRef, {
+          employeeId,
+          type: transactionType === 'advance' ? 'Advance' : 'Return',
+          amount: transactionType === 'advance' ? amount : -amount,
+          date: newAdvanceDate,
+          createdAt: new Date(),
+        });
+        Alert.alert('Success', 'Transaction added successfully!');
+      }
 
       setNewAdvanceAmount('');
       onClose();
-      Alert.alert('Success', `${transactionType === 'advance' ? 'Advance' : 'Return'} processed successfully!`);
     } catch (error) {
       console.error('Error processing transaction:', error);
       Alert.alert('Error', 'Failed to process transaction');
@@ -150,7 +167,7 @@ const AddAdvanceModal = ({visible, onClose, employeeId}) => {
             <Button
               onPress={handleTransaction}
               backgroundColor={COLORS.primary}
-              btnTitle={transactionType === 'advance' ? "Add Advance" : "Return Advance"}
+              btnTitle={transactionToEdit ? "Save Edit" : "Add Advance"}
               fontColor={COLORS.white}
               wrapperStyle={styles.addButton}
               titleStyle={{fontSize: SIZES.xs}}
