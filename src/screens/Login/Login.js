@@ -4,6 +4,7 @@ import {
   BackHandler,
   Platform,
   KeyboardAvoidingView,
+  Alert,
 } from 'react-native';
 import {COLORS, IMAGES, RH, FONTS, SIZES} from '../../theme';
 import {MMKV} from 'react-native-mmkv';
@@ -12,42 +13,43 @@ import {Button} from '../../components/Button/Button';
 import InputField from '../../components/InputField';
 
 const Login = ({navigation}) => {
-  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
-  const [emailError, setEmailError] = useState(false);
+  const [phoneError, setPhoneError] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
   const storage = new MMKV();
 
-  // Dummy login function simulating an API call
-
   const handleLoginPress = async () => {
+    // Reset errors
+    setPhoneError(false);
+    setPasswordError(false);
+
+    // Validate phone number
+    if (phone !== '9437128448') {
+      setPhoneError(true);
+      Alert.alert('Error', 'Invalid phone number');
+      return;
+    }
+
+    // Validate password
+    if (password !== 'Bej@8484') {
+      setPasswordError(true);
+      Alert.alert('Error', 'Invalid password');
+      return;
+    }
+
+    // If both are correct, proceed to login
+    storage.set('phone', phone);
+    storage.set('password', password);
+    setPhone('');
+    setPassword('');
     navigation.navigate('Home');
-
-    // const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    // if (!emailRegex.test(email)) {
-    //   setEmailError(true);
-    //   return;
-    // }
-    // if (password.length < 8) {
-    //   setPasswordError(true);
-    //   return;
-    // }
-    // // const deviceId = Date.now().toString();
-
-    // storage.set('email', email);
-    // storage.set('password', password);
-
-    // setEmail('');
-    // setPassword('');
-
-    // if (email === 'bej@gmail.com' && password === 'bej13579')
-    //   navigation.navigate('Home');
   };
 
   const isFocused = useIsFocused();
   useEffect(() => {
     if (isFocused) {
-      setEmailError(false);
+      setPhoneError(false);
       setPasswordError(false);
     }
   }, [isFocused]);
@@ -75,15 +77,15 @@ const Login = ({navigation}) => {
       style={{flex: 1, backgroundColor: COLORS.gray3, padding: RH(20)}}>
       <View style={{flex: 1, justifyContent: 'center'}}>
         <InputField
-          placeholder="Email"
-          label="Email"
-          iconType="Email"
-          isError={emailError}
-          value={email}
-          keyboardType="email-address"
+          placeholder="Phone"
+          label="Phone"
+          iconType="Phone"
+          isError={phoneError}
+          value={phone}
+          keyboardType="phone-pad"
           onChangeText={value => {
-            setEmailError(false);
-            setEmail(value);
+            setPhoneError(false);
+            setPhone(value);
           }}
         />
         <InputField

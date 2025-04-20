@@ -35,7 +35,6 @@ const AddEmployee = ({navigation}) => {
   const handleAddEmployee = async () => {
     if (
       !newEmployeeName ||
-      !newEmployeeContact ||
       !newEmployeeAddress ||
       !newEmployeeSalaryDate ||
       !newEmployeeSalaryAmount

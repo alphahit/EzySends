@@ -9,6 +9,7 @@ import {
   Pressable,
   Keyboard,
   Alert,
+  FlatList,
 } from 'react-native';
 import InputField from '../../components/InputField';
 import {COLORS, SIZES, FONTS, RH, RW} from '../../theme';
@@ -206,10 +207,11 @@ const Dashboard = () => {
       </View>
 
       {/* Table Rows */}
-      <ScrollView style={styles.tableContainer}>
-        {filteredData.map((item, index) => (
+      <FlatList
+        data={filteredData}
+        keyExtractor={item => item.id}
+        renderItem={({item, index}) => (
           <TouchableOpacity
-            key={item.id}
             onPress={() => {
               console.log(
                 'Navigating to StaffDetails with employeeId:',
@@ -226,8 +228,9 @@ const Dashboard = () => {
             <Text style={styles.tableCell}>{item.totalAdvance || 0}</Text>
             <Text style={styles.tableCell}>{item.salaryAmount}</Text>
           </TouchableOpacity>
-        ))}
-      </ScrollView>
+        )}
+        style={styles.tableContainer}
+      />
 
       {/* Floating Add Button */}
 

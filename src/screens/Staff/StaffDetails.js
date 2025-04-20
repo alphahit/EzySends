@@ -111,6 +111,12 @@ const StaffDetails = ({route}) => {
   const [newAdvanceDate, setNewAdvanceDate] = useState(new Date());
   const [newAdvanceAmount, setNewAdvanceAmount] = useState('');
   const [showAdvanceModal, setShowAdvanceModal] = useState(false);
+  const [showFilterModal, setShowFilterModal] = useState(false);
+
+  const handleFilterSelect = (filter) => {
+    setTypeFilter(filter);
+    setShowFilterModal(false);
+  };
 
   useEffect(() => {
     if (!employeeId) {
@@ -257,29 +263,31 @@ const StaffDetails = ({route}) => {
         </TouchableOpacity>
       </View>
 
-      {/* Filter Section: Two type filter buttons and two date picker buttons in one row */}
+      {/* Filter Section */}
       <View style={styles.filterRow}>
         <TouchableOpacity
-          style={[
-            styles.filterButton,
-            typeFilter === 'Salary' && styles.activeFilter,
-          ]}
-          onPress={() => {
-            setTypeFilter(typeFilter === 'Salary' ? '' : 'Salary');
-            Keyboard.dismiss();
-          }}>
-          <Text style={styles.filterButtonText}>S</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.filterButton,
-            typeFilter === 'Advance' && styles.activeFilter,
-          ]}
-          onPress={() => {
-            setTypeFilter(typeFilter === 'Advance' ? '' : 'Advance');
-            Keyboard.dismiss();
-          }}>
-          <Text style={styles.filterButtonText}>A</Text>
+          style={styles.filterButton}
+          onPress={() => setShowFilterModal(true)}>
+          <Icon 
+            name="filter-variant" 
+            size={SIZES.s} 
+            color={COLORS.white} 
+          />
+          {typeFilter && (
+            <View style={styles.activeFilterBadge}>
+              <Icon
+                name={
+                  typeFilter === 'Salary'
+                    ? 'currency-inr'
+                    : typeFilter === 'Advance'
+                    ? 'cash-plus'
+                    : 'cash-minus'
+                }
+                size={SIZES.xs}
+                color={COLORS.white}
+              />
+            </View>
+          )}
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.datePickerButton}
@@ -302,6 +310,52 @@ const StaffDetails = ({route}) => {
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* Filter Dropdown Modal */}
+      <Modal
+        transparent
+        visible={showFilterModal}
+        animationType="fade"
+        onRequestClose={() => setShowFilterModal(false)}>
+        <Pressable 
+          style={styles.modalOverlay} 
+          onPress={() => setShowFilterModal(false)}>
+          <View style={styles.filterModalContent}>
+            {[
+              {type: 'Salary', icon: 'currency-inr'},
+              {type: 'Advance', icon: 'cash-plus'},
+              {type: 'Return', icon: 'cash-minus'},
+            ].map(({type, icon}) => (
+              <TouchableOpacity
+                key={type}
+                style={[
+                  styles.filterOption,
+                  typeFilter === type && styles.selectedFilter,
+                ]}
+                onPress={() => handleFilterSelect(type)}>
+                <Icon
+                  name={icon}
+                  size={SIZES.s}
+                  color={typeFilter === type ? COLORS.white : COLORS.black}
+                />
+                <Text
+                  style={[
+                    styles.filterOptionText,
+                    typeFilter === type && styles.selectedFilterText,
+                  ]}>
+                  {type}
+                </Text>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity
+              style={styles.filterOption}
+              onPress={() => handleFilterSelect('')}>
+              <Icon name="close" size={SIZES.s} color={COLORS.black} />
+              <Text style={styles.filterOptionText}>Clear Filter</Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
 
       {/* Table Header */}
       <View style={styles.tableHeader}>
@@ -413,25 +467,52 @@ const styles = StyleSheet.create({
   filterRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     marginBottom: RH(16),
   },
   filterButton: {
-    backgroundColor: COLORS.primaryLight,
-    paddingVertical: RH(8),
-    paddingHorizontal: RW(12),
+    backgroundColor: COLORS.primary,
+    padding: RW(8),
     borderRadius: RW(4),
-    flex: 0.2,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: RW(4),
+    flexDirection: 'row',
+    gap: RW(4),
   },
-  activeFilter: {
+  activeFilterBadge: {
+    backgroundColor: COLORS.primaryDark,
+    padding: RW(4),
+    borderRadius: RW(2),
+  },
+  filterModalContent: {
+    backgroundColor: COLORS.white,
+    borderRadius: RW(8),
+    padding: RW(12),
+    width: '50%',
+    maxWidth: RW(200),
+    elevation: 5,
+    shadowColor: COLORS.black,
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  filterOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: RW(8),
+    borderRadius: RW(4),
+    marginBottom: RH(4),
+    gap: RW(8),
+  },
+  selectedFilter: {
     backgroundColor: COLORS.primary,
   },
-  filterButtonText: {
-    fontFamily: FONTS.PB,
-    fontSize: RW(14),
+  filterOptionText: {
+    fontFamily: FONTS.PR,
+    fontSize: SIZES.xs,
+    color: COLORS.black,
+  },
+  selectedFilterText: {
     color: COLORS.white,
   },
   datePickerButton: {

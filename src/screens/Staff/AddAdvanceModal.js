@@ -5,11 +5,13 @@ import {
   StyleSheet,
   Modal,
   Alert,
+  TouchableOpacity,
 } from 'react-native';
 import DatePicker from 'react-native-date-picker';
 import InputField from '../../components/InputField';
 import {COLORS, SIZES, FONTS, RH, RW} from '../../theme';
 import {Button} from '../../components/Button/Button';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import {
   getFirestore,
   collection,
@@ -22,8 +24,9 @@ import {
 const AddAdvanceModal = ({visible, onClose, employeeId}) => {
   const [newAdvanceDate, setNewAdvanceDate] = useState(new Date());
   const [newAdvanceAmount, setNewAdvanceAmount] = useState('');
+  const [transactionType, setTransactionType] = useState('advance');
 
-  const handleAddAdvance = async () => {
+  const handleTransaction = async () => {
     if (!newAdvanceAmount) {
       Alert.alert('Error', 'Please enter an amount');
       return;
@@ -32,29 +35,34 @@ const AddAdvanceModal = ({visible, onClose, employeeId}) => {
     try {
       const db = getFirestore();
       const transactionsRef = collection(db, 'transactions');
+      const amount = parseFloat(newAdvanceAmount);
 
       await addDoc(transactionsRef, {
         employeeId,
-        type: 'Advance',
-        amount: parseFloat(newAdvanceAmount),
+        type: transactionType === 'advance' ? 'Advance' : 'Return',
+        amount: transactionType === 'advance' ? amount : -amount,
         date: newAdvanceDate,
         createdAt: new Date(),
       });
 
-      // Update total advance in employee document
       const employeeRef = doc(db, 'employees', employeeId);
       const employeeDoc = await getDoc(employeeRef);
       const currentTotalAdvance = employeeDoc.data().totalAdvance || 0;
+      
+      const newTotalAdvance = transactionType === 'advance' 
+        ? currentTotalAdvance + amount 
+        : Math.max(0, currentTotalAdvance - amount);
+
       await updateDoc(employeeRef, {
-        totalAdvance: currentTotalAdvance + parseFloat(newAdvanceAmount),
+        totalAdvance: newTotalAdvance,
       });
 
       setNewAdvanceAmount('');
       onClose();
-      Alert.alert('Success', 'Advance added successfully!');
+      Alert.alert('Success', `${transactionType === 'advance' ? 'Advance' : 'Return'} processed successfully!`);
     } catch (error) {
-      console.error('Error adding advance:', error);
-      Alert.alert('Error', 'Failed to add advance');
+      console.error('Error processing transaction:', error);
+      Alert.alert('Error', 'Failed to process transaction');
     }
   };
 
@@ -63,27 +71,76 @@ const AddAdvanceModal = ({visible, onClose, employeeId}) => {
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <View style={styles.modalBody}>
+            <View style={styles.typeSelector}>
+              <TouchableOpacity
+                style={[
+                  styles.typeButton,
+                  transactionType === 'advance' && styles.selectedType,
+                ]}
+                onPress={() => setTransactionType('advance')}>
+                <Icon
+                  name="cash-plus"
+                  size={SIZES.s}
+                  color={transactionType === 'advance' ? COLORS.white : COLORS.black}
+                />
+                <Text
+                  style={[
+                    styles.typeButtonText,
+                    transactionType === 'advance' && styles.selectedTypeText,
+                  ]}>
+                  Advance
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.typeButton,
+                  transactionType === 'return' && styles.selectedType,
+                ]}
+                onPress={() => setTransactionType('return')}>
+                <Icon
+                  name="cash-minus"
+                  size={SIZES.s}
+                  color={transactionType === 'return' ? COLORS.white : COLORS.black}
+                />
+                <Text
+                  style={[
+                    styles.typeButtonText,
+                    transactionType === 'return' && styles.selectedTypeText,
+                  ]}>
+                  Return
+                </Text>
+              </TouchableOpacity>
+            </View>
+
             <View style={styles.inputSection}>
-              <Text style={styles.inputLabel}>Amount</Text>
+              <View style={styles.inputLabelContainer}>
+                <Icon name="currency-inr" size={SIZES.xs} color={COLORS.gray2} />
+                <Text style={styles.inputLabel}>Amount</Text>
+              </View>
               <InputField
                 placeholder="Enter amount"
                 value={newAdvanceAmount}
                 onChangeText={setNewAdvanceAmount}
                 keyboardType="numeric"
-                labelStyle={{fontSize: SIZES.xs}}
-                inputStyle={{fontSize: SIZES.s}}
-                inputHeight={RH(45)}
+                labelStyle={{fontSize: SIZES.xxs}}
+                inputStyle={{fontSize: SIZES.xs}}
+                inputHeight={RH(40)}
                 containerStyle={styles.amountInput}
+                style={{wrapper: {marginBottom: 0}}}
               />
             </View>
 
             <View style={styles.inputSection}>
-              <Text style={styles.inputLabel}>Date</Text>
+              <View style={styles.inputLabelContainer}>
+                <Icon name="calendar" size={SIZES.xs} color={COLORS.gray2} />
+                <Text style={styles.inputLabel}>Date</Text>
+              </View>
               <View style={styles.datePickerContainer}>
                 <DatePicker
                   date={newAdvanceDate}
                   onDateChange={setNewAdvanceDate}
                   mode="date"
+                  style={{height: RH(100)}}
                 />
               </View>
             </View>
@@ -91,12 +148,12 @@ const AddAdvanceModal = ({visible, onClose, employeeId}) => {
 
           <View style={styles.modalFooter}>
             <Button
-              onPress={handleAddAdvance}
+              onPress={handleTransaction}
               backgroundColor={COLORS.primary}
-              btnTitle="Add Advance"
+              btnTitle={transactionType === 'advance' ? "Add Advance" : "Return Advance"}
               fontColor={COLORS.white}
               wrapperStyle={styles.addButton}
-              titleStyle={{fontSize: SIZES.s}}
+              titleStyle={{fontSize: SIZES.xs}}
             />
             <Button
               onPress={onClose}
@@ -104,7 +161,7 @@ const AddAdvanceModal = ({visible, onClose, employeeId}) => {
               btnTitle="Cancel"
               fontColor={COLORS.black}
               wrapperStyle={[styles.cancelButton]}
-              titleStyle={{fontSize: SIZES.s}}
+              titleStyle={{fontSize: SIZES.xs}}
             />
           </View>
         </View>
@@ -122,79 +179,83 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     backgroundColor: COLORS.white,
-    borderRadius: RW(16),
-    width: '90%',
-    maxWidth: RW(400),
+    borderRadius: RW(12),
+    width: '85%',
+    maxWidth: RW(350),
     elevation: 5,
     shadowColor: COLORS.black,
     shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
   },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: RW(20),
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.gray3,
-  },
-  modalTitle: {
-    fontFamily: FONTS.PB,
-    fontSize: SIZES.lg,
-    color: COLORS.black,
-  },
-  closeButton: {
-    width: RW(30),
-    height: RW(30),
-    borderRadius: RW(15),
-    backgroundColor: COLORS.gray3,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  closeButtonText: {
-    fontSize: SIZES.s,
-    color: COLORS.black,
-  },
   modalBody: {
+    padding: RW(12),
+  },
+  typeSelector: {
     flexDirection: 'row',
-    padding: RW(20),
     justifyContent: 'space-between',
+    marginBottom: RH(12),
+  },
+  typeButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: RH(8),
+    marginHorizontal: RW(4),
+    borderRadius: RW(6),
+    borderWidth: 1,
+    borderColor: COLORS.gray3,
+    gap: RW(4),
+  },
+  selectedType: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  typeButtonText: {
+    fontFamily: FONTS.PR,
+    fontSize: SIZES.xs,
+    color: COLORS.black,
+  },
+  selectedTypeText: {
+    color: COLORS.white,
   },
   inputSection: {
-    flex: 0.5,
-    marginHorizontal: RW(8),
+    marginBottom: RH(12),
+  },
+  inputLabelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: RW(4),
+    marginBottom: RH(4),
   },
   inputLabel: {
     fontFamily: FONTS.PR,
-    fontSize: SIZES.s,
+    fontSize: SIZES.xxs,
     color: COLORS.gray2,
-    marginBottom: RH(8),
   },
   amountInput: {
     width: '100%',
+    marginBottom: 0,
   },
   datePickerContainer: {
-    flex: 0.5,
     borderWidth: 1,
     borderColor: COLORS.gray3,
-    borderRadius: RW(8),
-    padding: RW(10),
+    borderRadius: RW(6),
+    padding: RW(8),
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: RH(120),
+    minHeight: RH(100),
   },
   modalFooter: {
-    marginTop: RH(20),
     flexDirection: 'row',
     justifyContent: 'space-between',
-    padding: RW(20),
-    borderTopWidth: 1,
-    borderTopColor: COLORS.gray3,
+    paddingHorizontal: RW(12),
+    paddingBottom: RW(12),
   },
   addButton: {
     flex: 1,
-    marginRight: RW(10),
+    marginRight: RW(8),
   },
   cancelButton: {
     flex: 1,

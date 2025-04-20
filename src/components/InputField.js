@@ -41,17 +41,18 @@ const InputField = ({
       flexDirection: 'row',
       height: inputHeight,
       paddingHorizontal: RW(12),
+      overflow: 'hidden',
     },
     inputContainer: {
-      alignItems: 'center',
-      flexDirection: 'row',
       flex: 1,
+      height: '100%',
     },
     input: {
       color: COLORS.darkBlack,
       flex: 1,
       fontSize: SIZES.sl,
       fontWeight: '600',
+      height: '100%',
       ...inputStyle,
     },
     spaceRight: {
