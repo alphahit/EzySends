@@ -25,18 +25,18 @@ const Login = ({navigation}) => {
     setPasswordError(false);
 
     // Validate phone number
-    if (phone !== '9437128448') {
-      setPhoneError(true);
-      Alert.alert('Error', 'Invalid phone number');
-      return;
-    }
+    // if (phone !== '9437128448') {
+    //   setPhoneError(true);
+    //   Alert.alert('Error', 'Invalid phone number');
+    //   return;
+    // }
 
-    // Validate password
-    if (password !== 'Bej@8484') {
-      setPasswordError(true);
-      Alert.alert('Error', 'Invalid password');
-      return;
-    }
+    // // Validate password
+    // if (password !== 'Bej@8484') {
+    //   setPasswordError(true);
+    //   Alert.alert('Error', 'Invalid password');
+    //   return;
+    // }
 
     // If both are correct, proceed to login
     storage.set('phone', phone);

@@ -28,9 +28,10 @@ const AddEmployee = ({navigation}) => {
   // Remove the InputField for Salary Date and use a custom value
   const [newEmployeeSalaryDate, setNewEmployeeSalaryDate] = useState('');
   const [newEmployeeSalaryAmount, setNewEmployeeSalaryAmount] = useState('');
-  // Control the Salary Date Picker modal visibility
-  const [isSalaryDateModalVisible, setIsSalaryDateModalVisible] =
-    useState(false);
+// Description state
+const [newEmployeeDescription, setNewEmployeeDescription] = useState('');
+// Control the Salary Date Picker modal visibility
+const [isSalaryDateModalVisible, setIsSalaryDateModalVisible] = useState(false);
 
   const handleAddEmployee = async () => {
     if (
@@ -38,6 +39,7 @@ const AddEmployee = ({navigation}) => {
       !newEmployeeAddress ||
       !newEmployeeSalaryDate ||
       !newEmployeeSalaryAmount
+      // Description is optional, do not require
     ) {
       Alert.alert('Error', 'Please fill in all fields.');
       return;
@@ -53,6 +55,7 @@ const AddEmployee = ({navigation}) => {
         address: newEmployeeAddress,
         salaryDate: newEmployeeSalaryDate,
         salaryAmount: parseFloat(newEmployeeSalaryAmount),
+        description: newEmployeeDescription,
         totalAdvance: 0,
         createdAt: serverTimestamp(),
       });
@@ -119,7 +122,10 @@ const AddEmployee = ({navigation}) => {
                 Salary Date
               </Text>
               <Pressable
-                onPress={() => setIsSalaryDateModalVisible(true)}
+                onPress={() =>{
+                  // Keyboard.dismiss();
+                  setIsSalaryDateModalVisible(true)
+                }}
                 style={styles.datePickerField}>
                 <Text style={styles.datePickerText}>
                   {newEmployeeSalaryDate
@@ -137,6 +143,18 @@ const AddEmployee = ({navigation}) => {
               labelStyle={{fontSize: SIZES.xs}}
               inputStyle={{fontSize: SIZES.xs}}
               inputHeight={RH(40)}
+            />
+            <InputField
+              placeholder="Description (optional)"
+              value={newEmployeeDescription}
+              onChangeText={setNewEmployeeDescription}
+              label="Description"
+              labelStyle={{fontSize: SIZES.xs}}
+              inputStyle={{fontSize: SIZES.xs}}
+              inputHeight={RH(40)}
+              multiline
+              numberOfLines={3}
+              style={{marginBottom: RH(8)}}
             />
             <View style={styles.buttonContainer}>
               <Button

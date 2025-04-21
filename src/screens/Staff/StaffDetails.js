@@ -25,10 +25,15 @@ import {
   orderBy,
   getDocs,
   deleteDoc,
+  updateDoc,
 } from '@react-native-firebase/firestore';
 import AddAdvanceModal from './AddAdvanceModal';
+import StaffInfoModal from './StaffInfoModal';
+import SalaryPaidModal from './SalaryPaidModal';
+import TransactionActionsModal from './TransactionActionsModal';
+import FilterModal from './FilterModal';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { useNavigation } from '@react-navigation/native';
+import {useNavigation} from '@react-navigation/native';
 
 // Helper function to format Date in DD-MM-YYYY
 const formatDate = date => {
@@ -39,120 +44,6 @@ const formatDate = date => {
   return `${day}-${month}-${year}`;
 };
 
-// Staff Info Modal Component
-const StaffInfoModal = ({visible, onClose, staffInfo, navigation, employeeId}) => {
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-
-  const handleEdit = () => {
-    onClose();
-    navigation.navigate('EditEmployee', {
-      employeeId,
-      employeeData: staffInfo,
-    });
-  };
-
-  const handleDelete = async () => {
-    try {
-      const db = getFirestore();
-      const employeeRef = doc(db, 'employees', employeeId);
-      await deleteDoc(employeeRef);
-      Alert.alert('Success', 'Employee deleted successfully!');
-      navigation.goBack();
-    } catch (error) {
-      console.error('Error deleting employee:', error);
-      Alert.alert('Error', 'Failed to delete employee.');
-    }
-  };
-
-  return (
-    <>
-      <Modal transparent visible={visible} animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <View style={styles.modalTitleContainer}>
-                <Icon name="account-details" size={SIZES.sm} color={COLORS.primary} />
-                <Text style={styles.modalTitle}>Staff Details</Text>
-              </View>
-              <View style={styles.modalActions}>
-                <TouchableOpacity onPress={handleEdit} style={styles.actionButton}>
-                  <Icon name="pencil" size={SIZES.s} color={COLORS.primary} />
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => setShowDeleteModal(true)} style={styles.actionButton}>
-                  <Icon name="delete" size={SIZES.s} color={COLORS.error} />
-                </TouchableOpacity>
-                <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                  <Icon name="close" size={SIZES.s} color={COLORS.black} />
-                </TouchableOpacity>
-              </View>
-            </View>
-            <View style={styles.modalBody}>
-              <View style={styles.infoRow}>
-                <View style={styles.infoLabelContainer}>
-                  <Icon name="account" size={SIZES.s} color={COLORS.primary} />
-                  <Text style={styles.infoLabel}>Name</Text>
-                </View>
-                <Text style={styles.infoValue}>{staffInfo?.name}</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <View style={styles.infoLabelContainer}>
-                  <Icon name="phone" size={SIZES.s} color={COLORS.primary} />
-                  <Text style={styles.infoLabel}>Contact</Text>
-                </View>
-                <Text style={styles.infoValue}>{staffInfo?.contact}</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <View style={styles.infoLabelContainer}>
-                  <Icon name="map-marker" size={SIZES.s} color={COLORS.primary} />
-                  <Text style={styles.infoLabel}>Address</Text>
-                </View>
-                <Text style={styles.infoValue}>{staffInfo?.address}</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <View style={styles.infoLabelContainer}>
-                  <Icon name="calendar" size={SIZES.s} color={COLORS.primary} />
-                  <Text style={styles.infoLabel}>Salary Date</Text>
-                </View>
-                <Text style={styles.infoValue}>{staffInfo?.salaryDate}</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <View style={styles.infoLabelContainer}>
-                  <Icon name="currency-inr" size={SIZES.s} color={COLORS.primary} />
-                  <Text style={styles.infoLabel}>Salary Amount</Text>
-                </View>
-                <Text style={styles.infoValue}>₹{staffInfo?.salaryAmount}</Text>
-              </View>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Delete Confirmation Modal */}
-      <Modal transparent visible={showDeleteModal} animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.confirmationModalContent}>
-            <Text style={styles.confirmationTitle}>Delete Employee</Text>
-            <Text style={styles.confirmationMessage}>
-              Are you sure you want to delete this employee? This action cannot be undone.
-            </Text>
-            <View style={styles.confirmationButtons}>
-              <TouchableOpacity
-                style={[styles.confirmationButton, styles.cancelButton]}
-                onPress={() => setShowDeleteModal(false)}>
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.confirmationButton, styles.deleteButton]}
-                onPress={handleDelete}>
-                <Text style={styles.deleteButtonText}>Delete</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-    </>
-  );
-};
 
 const StaffDetails = ({route}) => {
   const {employeeId} = route.params;
@@ -172,8 +63,10 @@ const StaffDetails = ({route}) => {
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [showTransactionActions, setShowTransactionActions] = useState(false);
+  const [showSalaryPaidModal, setShowSalaryPaidModal] = useState(false);
+  const [isSalaryPaid, setIsSalaryPaid] = useState(false);
 
-  const handleFilterSelect = (filter) => {
+  const handleFilterSelect = filter => {
     setTypeFilter(filter);
     setShowFilterModal(false);
   };
@@ -291,7 +184,6 @@ const StaffDetails = ({route}) => {
     };
   }, [employeeId]);
 
-
   const filteredTransactions = useMemo(() => {
     return transactions.filter(item => {
       if (
@@ -311,23 +203,22 @@ const StaffDetails = ({route}) => {
     });
   }, [transactions, typeFilter, startDate, endDate]);
 
-  const handleLongPress = (transaction) => {
+  const handleLongPress = transaction => {
     setSelectedTransaction(transaction);
     setShowTransactionActions(true);
   };
 
-
   const handleDeleteTransaction = async () => {
     const db = firestore();
     const transactionRef = db.doc(`transactions/${selectedTransaction.id}`);
-    const employeeRef    = db.doc(`employees/${employeeId}`);
-    const amt            = selectedTransaction.amount; // already signed
-  
+    const employeeRef = db.doc(`employees/${employeeId}`);
+    const amt = selectedTransaction.amount; // already signed
+
     try {
       await transactionRef.delete();
       // if it was +100, this will do −100; if −50, this will do +50
       await employeeRef.update({
-        totalAdvance: firestore.FieldValue.increment(-amt)
+        totalAdvance: firestore.FieldValue.increment(-amt),
       });
       Alert.alert('Success', 'Transaction deleted successfully!');
       setShowTransactionActions(false);
@@ -336,12 +227,57 @@ const StaffDetails = ({route}) => {
       Alert.alert('Error', 'Failed to delete transaction.');
     }
   };
-  
+
   const handleEditTransaction = () => {
     setShowTransactionActions(false);
     setShowAdvanceModal(true);
     setNewAdvanceDate(selectedTransaction.date.toDate());
     setNewAdvanceAmount(selectedTransaction.amount.toString());
+  };
+
+
+  // Restore actualPayDate state and save logic
+  const [actualPayDate, setActualPayDate] = useState(null);
+
+  const handleSaveActualPayDate = async () => {
+    if (!selectedTransaction || !actualPayDate) {
+      Alert.alert('Error', 'Transaction or date not selected');
+      return;
+    }
+    try {
+      const db = getFirestore();
+      const transactionRef = doc(db, 'transactions', selectedTransaction.id);
+      console.log('[handleSaveActualPayDate] Updating actualPayDate to:', actualPayDate, 'for doc:', selectedTransaction.id);
+      await updateDoc(transactionRef, {
+        paid: true,
+        actualPayDate: actualPayDate,
+      });
+      Alert.alert('Actual Pay Date Saved.');
+      setShowSalaryPaidModal(false);
+    } catch (error) {
+      console.error('[handleSaveActualPayDate] Error updating actualPayDate:', error);
+      Alert.alert('Error', 'Failed to save actual pay date');
+    }
+  };
+
+  const handleTransactionPress = transaction => {
+    if (transaction.type === 'Salary') {
+      setSelectedTransaction(transaction);
+      setIsSalaryPaid(transaction.paid || false);
+      // Convert Firestore Timestamp or string to JS Date for actualPayDate
+      let date = null;
+      if (transaction.actualPayDate) {
+        if (transaction.actualPayDate instanceof Date) {
+          date = transaction.actualPayDate;
+        } else if (typeof transaction.actualPayDate.toDate === 'function') {
+          date = transaction.actualPayDate.toDate();
+        } else if (typeof transaction.actualPayDate === 'string' || typeof transaction.actualPayDate === 'number') {
+          date = new Date(transaction.actualPayDate);
+        }
+      }
+      setActualPayDate(date);
+      setShowSalaryPaidModal(true);
+    }
   };
 
   return (
@@ -361,11 +297,7 @@ const StaffDetails = ({route}) => {
         <TouchableOpacity
           style={styles.filterButton}
           onPress={() => setShowFilterModal(true)}>
-          <Icon 
-            name="filter-variant" 
-            size={SIZES.s} 
-            color={COLORS.white} 
-          />
+          <Icon name="filter-variant" size={SIZES.s} color={COLORS.white} />
           {typeFilter && (
             <View style={styles.activeFilterBadge}>
               <Icon
@@ -405,50 +337,13 @@ const StaffDetails = ({route}) => {
       </View>
 
       {/* Filter Dropdown Modal */}
-      <Modal
-        transparent
+      <FilterModal
         visible={showFilterModal}
-        animationType="fade"
-        onRequestClose={() => setShowFilterModal(false)}>
-        <Pressable 
-          style={styles.modalOverlay} 
-          onPress={() => setShowFilterModal(false)}>
-          <View style={styles.filterModalContent}>
-            {[
-              {type: 'Salary', icon: 'currency-inr'},
-              {type: 'Advance', icon: 'cash-plus'},
-              {type: 'Return', icon: 'cash-minus'},
-            ].map(({type, icon}) => (
-              <TouchableOpacity
-                key={type}
-                style={[
-                  styles.filterOption,
-                  typeFilter === type && styles.selectedFilter,
-                ]}
-                onPress={() => handleFilterSelect(type)}>
-                <Icon
-                  name={icon}
-                  size={SIZES.s}
-                  color={typeFilter === type ? COLORS.white : COLORS.black}
-                />
-                <Text
-                  style={[
-                    styles.filterOptionText,
-                    typeFilter === type && styles.selectedFilterText,
-                  ]}>
-                  {type}
-                </Text>
-              </TouchableOpacity>
-            ))}
-            <TouchableOpacity
-              style={styles.filterOption}
-              onPress={() => handleFilterSelect('')}>
-              <Icon name="close" size={SIZES.s} color={COLORS.black} />
-              <Text style={styles.filterOptionText}>Clear Filter</Text>
-            </TouchableOpacity>
-          </View>
-        </Pressable>
-      </Modal>
+        onClose={() => setShowFilterModal(false)}
+        onSelect={handleFilterSelect}
+        typeFilter={typeFilter}
+        styles={styles}
+      />
 
       {/* Table Header */}
       <View style={styles.tableHeader}>
@@ -466,8 +361,18 @@ const StaffDetails = ({route}) => {
             style={[
               styles.tableRow,
               index % 2 === 0 ? styles.rowEven : styles.rowOdd,
+              item.type === 'Salary' && item.paid && styles.paidSalaryRow,
             ]}
-            onLongPress={() => handleLongPress(item)}>
+            // only enable long‑press for non‑salary items
+            onLongPress={
+              item.type !== 'Salary' ? () => handleLongPress(item) : undefined
+            }
+            // salary rows still open the paid‑status modal on tap
+            onPress={() =>
+              item.type === 'Salary' ? handleTransactionPress(item) : null
+            }>
+
+              {console.log('item===>', item)}
             <Text style={styles.tableCell}>{index + 1}</Text>
             <Text style={styles.tableCell}>
               {formatDate(item.date.toDate())}
@@ -492,6 +397,7 @@ const StaffDetails = ({route}) => {
         staffInfo={staffInfo}
         navigation={navigation}
         employeeId={employeeId}
+        styles={styles}
       />
 
       {/* Add Advance Modal */}
@@ -506,30 +412,26 @@ const StaffDetails = ({route}) => {
       />
 
       {/* Transaction Actions Modal */}
-      <Modal transparent visible={showTransactionActions} animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.transactionActionsModal}>
-            <TouchableOpacity
-              style={styles.transactionActionButton}
-              onPress={handleEditTransaction}>
-              <Icon name="pencil" size={SIZES.s} color={COLORS.primary} />
-              <Text style={styles.transactionActionText}>Edit Transaction</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.transactionActionButton}
-              onPress={handleDeleteTransaction}>
-              <Icon name="delete" size={SIZES.s} color={COLORS.error} />
-              <Text style={styles.transactionActionText}>Delete Transaction</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.transactionActionButton}
-              onPress={() => setShowTransactionActions(false)}>
-              <Icon name="close" size={SIZES.s} color={COLORS.black} />
-              <Text style={styles.transactionActionText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      <TransactionActionsModal
+        visible={showTransactionActions}
+        onEdit={handleEditTransaction}
+        onDelete={handleDeleteTransaction}
+        onCancel={() => setShowTransactionActions(false)}
+        styles={styles}
+      />
+
+      {/* Salary Paid Status Modal */}
+      {/* Salary Paid Status Modal */}
+      <SalaryPaidModal
+        visible={showSalaryPaidModal}
+        isSalaryPaid={isSalaryPaid}
+        setIsSalaryPaid={setIsSalaryPaid}
+        actualPayDate={actualPayDate}
+        setActualPayDate={setActualPayDate}
+        onClose={() => setShowSalaryPaidModal(false)}
+        onSave={handleSaveActualPayDate}
+        styles={styles}
+      />
 
       {/* Date Pickers for Start and End Dates */}
       <DatePicker
@@ -896,6 +798,56 @@ const styles = StyleSheet.create({
     fontSize: SIZES.s,
     color: COLORS.black,
     marginLeft: RW(12),
+  },
+  paidSalaryRow: {
+    borderWidth: 2,
+    borderColor: COLORS.success,
+    borderRadius: RW(4),
+    marginVertical: RH(4),
+    backgroundColor: '#eaffea', // subtle green background
+  },
+
+  paidStatusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: RH(16),
+  },
+  paidStatusLabel: {
+    fontFamily: FONTS.PR,
+    fontSize: SIZES.s,
+    color: COLORS.black,
+  },
+  checkbox: {
+    width: RW(24),
+    height: RW(24),
+    borderRadius: RW(12),
+    borderWidth: 2,
+    borderColor: COLORS.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checked: {
+    backgroundColor: COLORS.primary,
+  },
+  saveButton: {
+    backgroundColor: COLORS.primary,
+  },
+  saveButtonText: {
+    color: COLORS.white,
+  },
+  salaryModalContent: {
+    backgroundColor: COLORS.white,
+    borderRadius: RW(12),
+    padding: RW(24),
+    width: '80%',
+    alignItems: 'center',
+  },
+  salaryModalTitle: {
+    fontFamily: FONTS.PB,
+    fontSize: SIZES.l,
+    marginBottom: RH(16),
+    color: COLORS.black,
   },
 });
 

@@ -194,7 +194,7 @@ const AddAdvanceModal = ({visible, onClose, employeeId, transactionToEdit}) => {
             <Button
               onPress={handleTransaction}
               backgroundColor={COLORS.primary}
-              btnTitle={transactionToEdit ? 'Save Edit' : 'Add Advance'}
+              btnTitle={transactionToEdit ? 'Update' : 'Save'}
               fontColor={COLORS.white}
               wrapperStyle={styles.addButton}
               titleStyle={{fontSize: SIZES.xs}}

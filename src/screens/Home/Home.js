@@ -1,4 +1,5 @@
 import React, {useState, useMemo, useEffect} from 'react';
+import { listenAccumulatedSalary } from './accumulateSalary';
 import {
   View,
   Text,
@@ -125,6 +126,7 @@ const Dashboard = () => {
   const [sortModalVisible, setSortModalVisible] = useState(false);
   const [sortOption, setSortOption] = useState(null);
   const [employees, setEmployees] = useState([]);
+const [accumulatedSalaries, setAccumulatedSalaries] = useState({});
   const navigation = useNavigation();
 
   useEffect(() => {
@@ -134,22 +136,24 @@ const Dashboard = () => {
 
     const unsubscribe = onSnapshot(q, snapshot => {
       const employeeList = [];
+      const salaryUnsubscribers = [];
       snapshot.forEach(doc => {
         const data = doc.data();
-        console.log('Employee data:', {
-          id: doc.id,
-          name: data.name,
-          totalAdvance: data.totalAdvance,
-          salaryAmount: data.salaryAmount
-        });
+        const employeeId = doc.id;
         employeeList.push({
-          id: doc.id,
+          id: employeeId,
           ...data,
           totalAdvance: data.totalAdvance || 0,
         });
+        // Listen for accumulated salary for this employee
+        const unsub = listenAccumulatedSalary(employeeId, (accumulated) => {
+          setAccumulatedSalaries(prev => ({ ...prev, [employeeId]: accumulated }));
+        });
+        salaryUnsubscribers.push(unsub);
       });
-      console.log('Updated employee list:', employeeList);
       setEmployees(employeeList);
+      // Clean up salary listeners on unmount
+      return () => salaryUnsubscribers.forEach(unsub => unsub());
     });
 
     return () => unsubscribe();
@@ -228,9 +232,12 @@ const Dashboard = () => {
               index % 2 === 0 ? styles.rowEven : styles.rowOdd,
             ]}>
             <Text style={styles.tableCell}>{index + 1}</Text>
-            <Text style={styles.tableCell}>{item.name}</Text>
+            <View style={styles.tableCell}>
+              <Text style={{fontWeight: 'bold'}}>{item.name}</Text>
+              <Text style={{fontSize: 12, color: '#888'}}>₹{item.salaryAmount} / month</Text>
+            </View>
             <Text style={styles.tableCell}>₹{item.totalAdvance}</Text>
-            <Text style={styles.tableCell}>₹{item.salaryAmount}</Text>
+            <Text style={styles.tableCell}>₹{accumulatedSalaries[item.id] !== undefined ? accumulatedSalaries[item.id] : '--'}</Text>
           </TouchableOpacity>
         )}
         style={styles.tableContainer}
