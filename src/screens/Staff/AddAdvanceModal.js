@@ -1,4 +1,5 @@
 import React, {useState, useEffect} from 'react';
+import firestore from '@react-native-firebase/firestore';
 import {
   View,
   Text,
@@ -12,22 +13,21 @@ import InputField from '../../components/InputField';
 import {COLORS, SIZES, FONTS, RH, RW} from '../../theme';
 import {Button} from '../../components/Button/Button';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import {
-  getFirestore,
-  collection,
-  addDoc,
-  doc,
-  getDoc,
-  updateDoc,
-} from '@react-native-firebase/firestore';
+
 
 const AddAdvanceModal = ({visible, onClose, employeeId, transactionToEdit}) => {
-  const [newAdvanceDate, setNewAdvanceDate] = useState(transactionToEdit?.date?.toDate() || new Date());
+  const [newAdvanceDate, setNewAdvanceDate] = useState(
+    transactionToEdit?.date?.toDate() || new Date(),
+  );
   const [newAdvanceAmount, setNewAdvanceAmount] = useState(
-    transactionToEdit ? Math.abs(transactionToEdit.amount).toString() : ''
+    transactionToEdit ? Math.abs(transactionToEdit.amount).toString() : '',
   );
   const [transactionType, setTransactionType] = useState(
-    transactionToEdit ? (transactionToEdit.amount > 0 ? 'advance' : 'return') : 'advance'
+    transactionToEdit
+      ? transactionToEdit.amount > 0
+        ? 'advance'
+        : 'return'
+      : 'advance',
   );
 
   // Reset form when modal is opened/closed
@@ -49,29 +49,48 @@ const AddAdvanceModal = ({visible, onClose, employeeId, transactionToEdit}) => {
       return;
     }
 
-    try {
-      const db = getFirestore();
-      const transactionsRef = collection(db, 'transactions');
-      const amount = parseFloat(newAdvanceAmount);
+    const db = firestore();
+    const transactionsRef = db.collection('transactions');
+    const employeeRef = db.doc(`employees/${employeeId}`);
+    const amount = parseFloat(newAdvanceAmount);
+    // advance → +amount, return → −amount
+    const signedAmount =
+      transactionType === 'advance' ? amount : /* return */ -amount;
 
+    try {
       if (transactionToEdit) {
-        // Update existing transaction
-        const transactionRef = doc(db, 'transactions', transactionToEdit.id);
-        await updateDoc(transactionRef, {
+        const transactionRef = db.doc(`transactions/${transactionToEdit.id}`);
+        const oldAmount = transactionToEdit.amount;
+        const diff = signedAmount - oldAmount;
+
+        // 1) update the transaction record
+        await transactionRef.update({
           type: transactionType === 'advance' ? 'Advance' : 'Return',
-          amount: transactionType === 'advance' ? amount : -amount,
+          amount: signedAmount,
           date: newAdvanceDate,
         });
+
+        // 2) atomically bump totalAdvance by the change
+        await employeeRef.update({
+          totalAdvance: firestore.FieldValue.increment(diff),
+        });
+
         Alert.alert('Success', 'Transaction updated successfully!');
       } else {
-        // Add new transaction
-        await addDoc(transactionsRef, {
+        // 1) add new transaction
+        await transactionsRef.add({
           employeeId,
           type: transactionType === 'advance' ? 'Advance' : 'Return',
-          amount: transactionType === 'advance' ? amount : -amount,
+          amount: signedAmount,
           date: newAdvanceDate,
           createdAt: new Date(),
         });
+
+        // 2) increment totalAdvance
+        await employeeRef.update({
+          totalAdvance: firestore.FieldValue.increment(signedAmount),
+        });
+
         Alert.alert('Success', 'Transaction added successfully!');
       }
 
@@ -98,7 +117,9 @@ const AddAdvanceModal = ({visible, onClose, employeeId, transactionToEdit}) => {
                 <Icon
                   name="cash-plus"
                   size={SIZES.s}
-                  color={transactionType === 'advance' ? COLORS.white : COLORS.black}
+                  color={
+                    transactionType === 'advance' ? COLORS.white : COLORS.black
+                  }
                 />
                 <Text
                   style={[
@@ -117,7 +138,9 @@ const AddAdvanceModal = ({visible, onClose, employeeId, transactionToEdit}) => {
                 <Icon
                   name="cash-minus"
                   size={SIZES.s}
-                  color={transactionType === 'return' ? COLORS.white : COLORS.black}
+                  color={
+                    transactionType === 'return' ? COLORS.white : COLORS.black
+                  }
                 />
                 <Text
                   style={[
@@ -131,7 +154,11 @@ const AddAdvanceModal = ({visible, onClose, employeeId, transactionToEdit}) => {
 
             <View style={styles.inputSection}>
               <View style={styles.inputLabelContainer}>
-                <Icon name="currency-inr" size={SIZES.xs} color={COLORS.gray2} />
+                <Icon
+                  name="currency-inr"
+                  size={SIZES.xs}
+                  color={COLORS.gray2}
+                />
                 <Text style={styles.inputLabel}>Amount</Text>
               </View>
               <InputField
@@ -167,7 +194,7 @@ const AddAdvanceModal = ({visible, onClose, employeeId, transactionToEdit}) => {
             <Button
               onPress={handleTransaction}
               backgroundColor={COLORS.primary}
-              btnTitle={transactionToEdit ? "Save Edit" : "Add Advance"}
+              btnTitle={transactionToEdit ? 'Save Edit' : 'Add Advance'}
               fontColor={COLORS.white}
               wrapperStyle={styles.addButton}
               titleStyle={{fontSize: SIZES.xs}}

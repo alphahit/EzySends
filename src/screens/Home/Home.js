@@ -135,12 +135,20 @@ const Dashboard = () => {
     const unsubscribe = onSnapshot(q, snapshot => {
       const employeeList = [];
       snapshot.forEach(doc => {
+        const data = doc.data();
+        console.log('Employee data:', {
+          id: doc.id,
+          name: data.name,
+          totalAdvance: data.totalAdvance,
+          salaryAmount: data.salaryAmount
+        });
         employeeList.push({
           id: doc.id,
-          ...doc.data(),
+          ...data,
+          totalAdvance: data.totalAdvance || 0,
         });
       });
-      console.log('Fetched employees:', employeeList);
+      console.log('Updated employee list:', employeeList);
       setEmployees(employeeList);
     });
 
@@ -213,10 +221,6 @@ const Dashboard = () => {
         renderItem={({item, index}) => (
           <TouchableOpacity
             onPress={() => {
-              console.log(
-                'Navigating to StaffDetails with employeeId:',
-                item.id,
-              );
               navigation.navigate('StaffDetails', {employeeId: item.id});
             }}
             style={[
@@ -225,8 +229,8 @@ const Dashboard = () => {
             ]}>
             <Text style={styles.tableCell}>{index + 1}</Text>
             <Text style={styles.tableCell}>{item.name}</Text>
-            <Text style={styles.tableCell}>{item.totalAdvance || 0}</Text>
-            <Text style={styles.tableCell}>{item.salaryAmount}</Text>
+            <Text style={styles.tableCell}>₹{item.totalAdvance}</Text>
+            <Text style={styles.tableCell}>₹{item.salaryAmount}</Text>
           </TouchableOpacity>
         )}
         style={styles.tableContainer}

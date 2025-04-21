@@ -1,4 +1,5 @@
 import React, {useState, useMemo, useEffect} from 'react';
+import firestore from '@react-native-firebase/firestore';
 import {
   View,
   Text,
@@ -22,7 +23,6 @@ import {
   query,
   where,
   orderBy,
-  updateDoc,
   getDocs,
   deleteDoc,
 } from '@react-native-firebase/firestore';
@@ -316,11 +316,19 @@ const StaffDetails = ({route}) => {
     setShowTransactionActions(true);
   };
 
+
   const handleDeleteTransaction = async () => {
+    const db = firestore();
+    const transactionRef = db.doc(`transactions/${selectedTransaction.id}`);
+    const employeeRef    = db.doc(`employees/${employeeId}`);
+    const amt            = selectedTransaction.amount; // already signed
+  
     try {
-      const db = getFirestore();
-      const transactionRef = doc(db, 'transactions', selectedTransaction.id);
-      await deleteDoc(transactionRef);
+      await transactionRef.delete();
+      // if it was +100, this will do −100; if −50, this will do +50
+      await employeeRef.update({
+        totalAdvance: firestore.FieldValue.increment(-amt)
+      });
       Alert.alert('Success', 'Transaction deleted successfully!');
       setShowTransactionActions(false);
     } catch (error) {
@@ -328,7 +336,7 @@ const StaffDetails = ({route}) => {
       Alert.alert('Error', 'Failed to delete transaction.');
     }
   };
-
+  
   const handleEditTransaction = () => {
     setShowTransactionActions(false);
     setShowAdvanceModal(true);
