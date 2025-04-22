@@ -27,6 +27,7 @@ const EditEmployee = ({navigation, route}) => {
   const [newEmployeeAddress, setNewEmployeeAddress] = useState(employeeData.address || '');
   const [newEmployeeSalaryDate, setNewEmployeeSalaryDate] = useState(employeeData.salaryDate || '');
   const [newEmployeeSalaryAmount, setNewEmployeeSalaryAmount] = useState(employeeData.salaryAmount?.toString() || '');
+  const [newEmployeeDescription, setNewEmployeeDescription] = useState(employeeData.description || '');
   const [isSalaryDateModalVisible, setIsSalaryDateModalVisible] = useState(false);
 
   const handleSaveEmployee = async () => {
@@ -50,6 +51,7 @@ const EditEmployee = ({navigation, route}) => {
         address: newEmployeeAddress,
         salaryDate: newEmployeeSalaryDate,
         salaryAmount: parseFloat(newEmployeeSalaryAmount),
+        description: newEmployeeDescription,
       });
 
       Alert.alert('Success', 'Employee updated successfully!');
@@ -74,6 +76,7 @@ const EditEmployee = ({navigation, route}) => {
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}>
+          <Text style={styles.title}>Edit Staff</Text>
           <View style={styles.formContainer}>
             <InputField
               placeholder="Name"
@@ -134,6 +137,18 @@ const EditEmployee = ({navigation, route}) => {
               inputStyle={{fontSize: SIZES.xs}}
               inputHeight={RH(40)}
             />
+            <InputField
+              placeholder="Description"
+              value={newEmployeeDescription}
+              onChangeText={setNewEmployeeDescription}
+              label="Description"
+              labelStyle={{fontSize: SIZES.xs}}
+              inputStyle={{fontSize: SIZES.xs}}
+              inputHeight={RH(40)}
+              multiline
+              numberOfLines={3}
+              style={{marginBottom: RH(8)}}
+            />
             <View style={styles.buttonContainer}>
               <Button
                 onPress={handleSaveEmployee}
@@ -190,6 +205,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.gray3,
+  },
+  title: {
+    fontSize: SIZES.l,
+    fontFamily: FONTS.PEB,
+    fontWeight: '600',
+    color: COLORS.black,
+    alignSelf: 'center',
+    marginBottom: RH(20),
+    textDecorationLine: 'underline',
   },
   scrollContent: {
     flexGrow: 1,

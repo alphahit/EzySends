@@ -278,7 +278,7 @@ const styles = StyleSheet.create({
     gap: RW(4),
   },
   selectedType: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.primaryDark,
     borderColor: COLORS.primary,
   },
   typeButtonText: {

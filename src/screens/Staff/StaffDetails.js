@@ -1,4 +1,4 @@
-import React, {useState, useMemo, useEffect} from 'react';
+import React, {useState, useMemo, useEffect, useCallback} from 'react';
 import firestore from '@react-native-firebase/firestore';
 import {
   View,
@@ -239,7 +239,7 @@ const StaffDetails = ({route}) => {
   // Restore actualPayDate state and save logic
   const [actualPayDate, setActualPayDate] = useState(null);
 
-  const handleSaveActualPayDate = async () => {
+  const handleSaveActualPayDate = useCallback(async () => {
     if (!selectedTransaction || !actualPayDate) {
       Alert.alert('Error', 'Transaction or date not selected');
       return;
@@ -249,7 +249,7 @@ const StaffDetails = ({route}) => {
       const transactionRef = doc(db, 'transactions', selectedTransaction.id);
       console.log('[handleSaveActualPayDate] Updating actualPayDate to:', actualPayDate, 'for doc:', selectedTransaction.id);
       await updateDoc(transactionRef, {
-        paid: true,
+        paid: isSalaryPaid,
         actualPayDate: actualPayDate,
       });
       Alert.alert('Actual Pay Date Saved.');
@@ -258,7 +258,7 @@ const StaffDetails = ({route}) => {
       console.error('[handleSaveActualPayDate] Error updating actualPayDate:', error);
       Alert.alert('Error', 'Failed to save actual pay date');
     }
-  };
+  }, [selectedTransaction, actualPayDate, isSalaryPaid, setShowSalaryPaidModal]) ;
 
   const handleTransactionPress = transaction => {
     if (transaction.type === 'Salary') {

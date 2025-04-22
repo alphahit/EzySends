@@ -81,6 +81,7 @@ const [isSalaryDateModalVisible, setIsSalaryDateModalVisible] = useState(false);
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}>
           <View style={styles.formContainer}>
+            <Text style={styles.title}>Add New Staff</Text>
             <InputField
               placeholder="Name"
               value={newEmployeeName}
@@ -210,6 +211,15 @@ const [isSalaryDateModalVisible, setIsSalaryDateModalVisible] = useState(false);
 };
 
 const styles = StyleSheet.create({
+  title: {
+    fontSize: SIZES.l,
+    fontFamily: FONTS.PEB,
+    fontWeight: '600',
+    color: COLORS.black,
+    alignSelf: 'center',
+    marginBottom: RH(20),
+    textDecorationLine: 'underline',
+  },
   container: {
     flex: 1,
     backgroundColor: COLORS.gray3,
