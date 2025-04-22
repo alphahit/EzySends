@@ -145,7 +145,7 @@ const [isSalaryDateModalVisible, setIsSalaryDateModalVisible] = useState(false);
               inputHeight={RH(40)}
             />
             <InputField
-              placeholder="Description (optional)"
+              placeholder="Description"
               value={newEmployeeDescription}
               onChangeText={setNewEmployeeDescription}
               label="Description"

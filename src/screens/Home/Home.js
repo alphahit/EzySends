@@ -1,5 +1,5 @@
 import React, {useState, useMemo, useEffect} from 'react';
-import { listenAccumulatedSalary } from './accumulateSalary';
+import {listenAccumulatedSalary} from './accumulateSalary';
 import {
   View,
   Text,
@@ -126,7 +126,7 @@ const Dashboard = () => {
   const [sortModalVisible, setSortModalVisible] = useState(false);
   const [sortOption, setSortOption] = useState(null);
   const [employees, setEmployees] = useState([]);
-const [accumulatedSalaries, setAccumulatedSalaries] = useState({});
+  const [accumulatedSalaries, setAccumulatedSalaries] = useState({});
   const navigation = useNavigation();
 
   useEffect(() => {
@@ -146,8 +146,11 @@ const [accumulatedSalaries, setAccumulatedSalaries] = useState({});
           totalAdvance: data.totalAdvance || 0,
         });
         // Listen for accumulated salary for this employee
-        const unsub = listenAccumulatedSalary(employeeId, (accumulated) => {
-          setAccumulatedSalaries(prev => ({ ...prev, [employeeId]: accumulated }));
+        const unsub = listenAccumulatedSalary(employeeId, accumulated => {
+          setAccumulatedSalaries(prev => ({
+            ...prev,
+            [employeeId]: accumulated,
+          }));
         });
         salaryUnsubscribers.push(unsub);
       });
@@ -233,11 +236,33 @@ const [accumulatedSalaries, setAccumulatedSalaries] = useState({});
             ]}>
             <Text style={styles.tableCell}>{index + 1}</Text>
             <View style={styles.tableCell}>
-              <Text style={{fontWeight: 'bold'}}>{item.name}</Text>
-              <Text style={{fontSize: 12, color: '#888'}}>₹{item.salaryAmount} / month</Text>
+              <Text
+                style={{
+                  fontWeight: 'bold',
+                  fontFamily: FONTS.PR,
+                  fontSize: SIZES.s,
+                  color: COLORS.black,
+                  textAlign: 'center',
+                }}>
+                {item.name}
+              </Text>
+              <Text
+                style={{
+                  fontFamily: FONTS.PR,
+                  fontSize: SIZES.xs,
+                  color: COLORS.black,
+                  textAlign: 'center',
+                }}>
+                ₹{item.salaryAmount} / m
+              </Text>
             </View>
             <Text style={styles.tableCell}>₹{item.totalAdvance}</Text>
-            <Text style={styles.tableCell}>₹{accumulatedSalaries[item.id] !== undefined ? accumulatedSalaries[item.id] : '--'}</Text>
+            <Text style={styles.tableCell}>
+              ₹
+              {accumulatedSalaries[item.id] !== undefined
+                ? accumulatedSalaries[item.id]
+                : '--'}
+            </Text>
           </TouchableOpacity>
         )}
         style={styles.tableContainer}
@@ -277,7 +302,7 @@ const styles = StyleSheet.create({
   },
   sortButton: {
     backgroundColor: COLORS.primary,
-padding: RW(8),
+    padding: RW(8),
     borderRadius: RW(8),
     justifyContent: 'center',
     alignItems: 'center',

@@ -19,6 +19,7 @@ const AddAdvanceModal = ({visible, onClose, employeeId, transactionToEdit}) => {
   const [newAdvanceDate, setNewAdvanceDate] = useState(
     transactionToEdit?.date?.toDate() || new Date(),
   );
+  const [openDatePicker, setOpenDatePicker] = useState(false);
   const [newAdvanceAmount, setNewAdvanceAmount] = useState(
     transactionToEdit ? Math.abs(transactionToEdit.amount).toString() : '',
   );
@@ -152,40 +153,59 @@ const AddAdvanceModal = ({visible, onClose, employeeId, transactionToEdit}) => {
               </TouchableOpacity>
             </View>
 
-            <View style={styles.inputSection}>
-              <View style={styles.inputLabelContainer}>
-                <Icon
-                  name="currency-inr"
-                  size={SIZES.xs}
-                  color={COLORS.gray2}
+            <View style={styles.inputRow}>
+              {/* Amount Field */}
+              <View style={{width: '48%'}}>
+                <View style={styles.inputLabelContainer}>
+                  <Icon
+                    name="currency-inr"
+                    size={SIZES.xs}
+                    color={COLORS.gray2}
+                  />
+                  <Text style={styles.inputLabel}>Amount</Text>
+                </View>
+                <InputField
+                  placeholder="Enter amount"
+                  value={newAdvanceAmount}
+                  onChangeText={setNewAdvanceAmount}
+                  keyboardType="numeric"
+                  labelStyle={{fontSize: SIZES.xxs}}
+                  inputStyle={{fontSize: SIZES.xs}}
+                  inputHeight={RH(40)}
+                  containerStyle={styles.amountInput}
+                  style={{wrapper: {marginBottom: 0}}}
                 />
-                <Text style={styles.inputLabel}>Amount</Text>
               </View>
-              <InputField
-                placeholder="Enter amount"
-                value={newAdvanceAmount}
-                onChangeText={setNewAdvanceAmount}
-                keyboardType="numeric"
-                labelStyle={{fontSize: SIZES.xxs}}
-                inputStyle={{fontSize: SIZES.xs}}
-                inputHeight={RH(40)}
-                containerStyle={styles.amountInput}
-                style={{wrapper: {marginBottom: 0}}}
-              />
-            </View>
 
-            <View style={styles.inputSection}>
-              <View style={styles.inputLabelContainer}>
-                <Icon name="calendar" size={SIZES.xs} color={COLORS.gray2} />
-                <Text style={styles.inputLabel}>Date</Text>
-              </View>
-              <View style={styles.datePickerContainer}>
-                <DatePicker
-                  date={newAdvanceDate}
-                  onDateChange={setNewAdvanceDate}
-                  mode="date"
-                  style={{height: RH(100)}}
-                />
+              {/* Date Field */}
+              <View style={[{width: '48%', marginLeft: RW(8)}]}>
+                <View style={styles.inputLabelContainer}>
+                  <Icon name="calendar" size={SIZES.xs} color={COLORS.gray2} />
+                  <Text style={styles.inputLabel}>Date</Text>
+                </View>
+            
+                  <TouchableOpacity
+                    style={{alignItems: 'center', padding: RH(12), borderWidth: 1, borderColor: COLORS.gray3, borderRadius: RW(6), backgroundColor: '#fafbfc'}}
+                    onPress={() => setOpenDatePicker(true)}
+                  >
+                    <Text style={{fontFamily: FONTS.PR, fontSize: SIZES.xs, color: COLORS.black}}>
+                      {newAdvanceDate ?
+                        `${('0' + newAdvanceDate.getDate()).slice(-2)}-${('0' + (newAdvanceDate.getMonth() + 1)).slice(-2)}-${newAdvanceDate.getFullYear()}`
+                        : 'Select Date'}
+                    </Text>
+                  </TouchableOpacity>
+                  <DatePicker
+                    modal
+                    open={openDatePicker}
+                    date={newAdvanceDate || new Date()}
+                    onConfirm={date => {
+                      setOpenDatePicker(false);
+                      setNewAdvanceDate(date);
+                    }}
+                    onCancel={() => setOpenDatePicker(false)}
+                    mode="date"
+                  />
+           
               </View>
             </View>
           </View>
@@ -215,6 +235,11 @@ const AddAdvanceModal = ({visible, onClose, employeeId, transactionToEdit}) => {
 };
 
 const styles = StyleSheet.create({
+  inputRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: RH(12),
+  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -264,9 +289,7 @@ const styles = StyleSheet.create({
   selectedTypeText: {
     color: COLORS.white,
   },
-  inputSection: {
-    marginBottom: RH(12),
-  },
+
   inputLabelContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -289,7 +312,6 @@ const styles = StyleSheet.create({
     padding: RW(8),
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: RH(100),
   },
   modalFooter: {
     flexDirection: 'row',

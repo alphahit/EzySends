@@ -91,7 +91,7 @@ const StaffInfoModal = ({ visible, onClose, staffInfo, navigation, employeeId, s
                   <Icon name="information-outline" size={SIZES.s} color={COLORS.primary} />
                   <Text style={styles.infoLabel}>Description</Text>
                 </View>
-                <Text style={[styles.infoValue, { flex: 1, textAlign: 'left' }]} numberOfLines={3}>
+                <Text style={[styles.infoValue, { flex: 1, textAlign: 'right' }]} numberOfLines={3}>
                   {staffInfo?.description ? staffInfo.description : 'No description provided.'}
                 </Text>
               </View>
