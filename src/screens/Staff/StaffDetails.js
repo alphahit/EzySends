@@ -44,7 +44,6 @@ const formatDate = date => {
   return `${day}-${month}-${year}`;
 };
 
-
 const StaffDetails = ({route}) => {
   const {employeeId} = route.params;
   console.log('StaffDetails mounted with employeeId:', employeeId);
@@ -235,10 +234,8 @@ const StaffDetails = ({route}) => {
     setNewAdvanceAmount(selectedTransaction.amount.toString());
   };
 
-
   // Restore actualPayDate state and save logic
   const [actualPayDate, setActualPayDate] = useState(null);
-
   const handleSaveActualPayDate = useCallback(async () => {
     if (!selectedTransaction || !actualPayDate) {
       Alert.alert('Error', 'Transaction or date not selected');
@@ -247,18 +244,42 @@ const StaffDetails = ({route}) => {
     try {
       const db = getFirestore();
       const transactionRef = doc(db, 'transactions', selectedTransaction.id);
-      console.log('[handleSaveActualPayDate] Updating actualPayDate to:', actualPayDate, 'for doc:', selectedTransaction.id);
-      await updateDoc(transactionRef, {
-        paid: isSalaryPaid,
-        actualPayDate: actualPayDate,
-      });
-      Alert.alert('Actual Pay Date Saved.');
+      console.log(
+        '[handleSaveActualPayDate] Updating actualPayDate to:',
+        actualPayDate,
+        'for doc:',
+        selectedTransaction.id,
+      );
+
+      if (!isSalaryPaid) {
+        setActualPayDate(null);
+        await updateDoc(transactionRef, {
+          paid: isSalaryPaid,
+          actualPayDate: null,
+        });
+        Alert.alert('Pay Date Removed.');
+      } else {
+        await updateDoc(transactionRef, {
+          paid: isSalaryPaid,
+          actualPayDate: actualPayDate,
+        });
+        Alert.alert('Actual Pay Date Saved.');
+      }
+
       setShowSalaryPaidModal(false);
     } catch (error) {
-      console.error('[handleSaveActualPayDate] Error updating actualPayDate:', error);
+      console.error(
+        '[handleSaveActualPayDate] Error updating actualPayDate:',
+        error,
+      );
       Alert.alert('Error', 'Failed to save actual pay date');
     }
-  }, [selectedTransaction, actualPayDate, isSalaryPaid, setShowSalaryPaidModal]) ;
+  }, [
+    selectedTransaction,
+    actualPayDate,
+    isSalaryPaid,
+    setShowSalaryPaidModal,
+  ]);
 
   const handleTransactionPress = transaction => {
     if (transaction.type === 'Salary') {
@@ -271,7 +292,10 @@ const StaffDetails = ({route}) => {
           date = transaction.actualPayDate;
         } else if (typeof transaction.actualPayDate.toDate === 'function') {
           date = transaction.actualPayDate.toDate();
-        } else if (typeof transaction.actualPayDate === 'string' || typeof transaction.actualPayDate === 'number') {
+        } else if (
+          typeof transaction.actualPayDate === 'string' ||
+          typeof transaction.actualPayDate === 'number'
+        ) {
           date = new Date(transaction.actualPayDate);
         }
       }
@@ -371,8 +395,7 @@ const StaffDetails = ({route}) => {
             onPress={() =>
               item.type === 'Salary' ? handleTransactionPress(item) : null
             }>
-
-              {console.log('item===>', item)}
+            {console.log('item===>', item)}
             <Text style={styles.tableCell}>{index + 1}</Text>
             <Text style={styles.tableCell}>
               {formatDate(item.date.toDate())}
