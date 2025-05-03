@@ -12,12 +12,13 @@ import {useIsFocused} from '@react-navigation/native';
 import {Button} from '../../components/Button/Button';
 import InputField from '../../components/InputField';
 
+const storage = new MMKV();
+
 const Login = ({navigation}) => {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [phoneError, setPhoneError] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
-  const storage = new MMKV();
 
   const handleLoginPress = async () => {
     // Reset errors
@@ -60,7 +61,6 @@ const Login = ({navigation}) => {
     return true;
   };
 
-  const scrollRef = useRef(null);
 
   useEffect(() => {
     const backHandler = BackHandler.addEventListener(

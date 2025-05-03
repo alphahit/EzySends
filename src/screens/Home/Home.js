@@ -22,8 +22,12 @@ import {
   onSnapshot,
   query,
   orderBy,
+  where,
+  getDocs,
+  addDoc,
 } from '@react-native-firebase/firestore';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import {MMKV} from 'react-native-mmkv';
 
 // A reusable modal to choose sort options
 const SortModal = ({visible, onClose, onSelect}) => {
@@ -121,45 +125,166 @@ const SortModal = ({visible, onClose, onSelect}) => {
   );
 };
 
+// Function to check and update salaries for all employees
+const checkAndUpdateSalaries = async () => {
+  try {
+    const db = getFirestore();
+    const employeesRef = collection(db, 'employees');
+    const employeesSnapshot = await getDocs(employeesRef);
+    const today = new Date();
+    const currentMonth = today.getMonth();
+    const currentYear = today.getFullYear();
+
+    for (const doc of employeesSnapshot.docs) {
+      const employeeData = doc.data();
+      const employeeId = doc.id;
+      const salaryDate = parseInt(employeeData.salaryDate);
+
+      // Check if we're in the same month as the salary date
+      const transactionsRef = collection(db, 'transactions');
+      const salaryQuery = query(
+        transactionsRef,
+        where('employeeId', '==', employeeId),
+        where('type', '==', 'Salary'),
+        where('date', '>=', new Date(currentYear, currentMonth, 1)),
+        where('date', '<=', new Date(currentYear, currentMonth + 1, 0)),
+      );
+
+      const salarySnapshot = await getDocs(salaryQuery);
+
+      // If no salary entry exists for this month
+      if (salarySnapshot.empty) {
+        // Create salary entry with the salary date
+        const salaryEntryDate = new Date(currentYear, currentMonth, salaryDate);
+
+        // Only add if the salary date has passed
+        if (salaryEntryDate <= today) {
+          await addDoc(transactionsRef, {
+            employeeId,
+            type: 'Salary',
+            amount: employeeData.salaryAmount,
+            date: salaryEntryDate,
+            createdAt: new Date(),
+            paid: false,
+          });
+          console.log(
+            `Added salary for employee ${employeeData.name} for date ${salaryDate}`,
+          );
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error updating salaries:', error);
+  }
+};
+
 const Dashboard = () => {
   const [searchText, setSearchText] = useState('');
   const [sortModalVisible, setSortModalVisible] = useState(false);
   const [sortOption, setSortOption] = useState(null);
   const [employees, setEmployees] = useState([]);
   const [accumulatedSalaries, setAccumulatedSalaries] = useState({});
+  const [salaryStatus, setSalaryStatus] = useState({});
   const navigation = useNavigation();
+  const storage = new MMKV();
+
+  // Check and update salaries when component mounts
+  useEffect(() => {
+    const today = new Date().toDateString();
+    const lastOpened = storage.getString('lastOpened');
+
+    if (lastOpened !== today) {
+      // Update last opened date
+      storage.set('lastOpened', today);
+      // Run salary check and update
+      checkAndUpdateSalaries();
+    }
+  }, []);
 
   useEffect(() => {
     const db = getFirestore();
     const employeesRef = collection(db, 'employees');
     const q = query(employeesRef, orderBy('name'));
 
-    const unsubscribe = onSnapshot(q, snapshot => {
-      const employeeList = [];
-      const salaryUnsubscribers = [];
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        const employeeId = doc.id;
-        employeeList.push({
-          id: employeeId,
-          ...data,
-          totalAdvance: data.totalAdvance || 0,
-        });
-        // Listen for accumulated salary for this employee
-        const unsub = listenAccumulatedSalary(employeeId, accumulated => {
-          setAccumulatedSalaries(prev => ({
-            ...prev,
-            [employeeId]: accumulated,
-          }));
-        });
-        salaryUnsubscribers.push(unsub);
-      });
-      setEmployees(employeeList);
-      // Clean up salary listeners on unmount
-      return () => salaryUnsubscribers.forEach(unsub => unsub());
-    });
+    console.log('Attempting to connect to Firestore...');
 
-    return () => unsubscribe();
+    const unsubscribe = onSnapshot(
+      q,
+      snapshot => {
+        console.log('Firestore connection successful, received snapshot');
+        const employeeList = [];
+        const salaryUnsubscribers = [];
+
+        if (!snapshot || !snapshot.docs) {
+          console.error('Invalid snapshot received:', snapshot);
+          return;
+        }
+
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          const employeeId = doc.id;
+          employeeList.push({
+            id: employeeId,
+            ...data,
+            totalAdvance: data.totalAdvance || 0,
+          });
+
+          // Listen for salary status
+          const salaryQuery = query(
+            collection(db, 'transactions'),
+            where('employeeId', '==', employeeId),
+            where('type', '==', 'Salary'),
+            where(
+              'date',
+              '>=',
+              new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+            ),
+            where(
+              'date',
+              '<=',
+              new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0),
+            ),
+          );
+
+          const salaryUnsub = onSnapshot(salaryQuery, salarySnapshot => {
+            const salaryData = salarySnapshot.docs[0]?.data();
+            setSalaryStatus(prev => ({
+              ...prev,
+              [employeeId]: {
+                exists: !salarySnapshot.empty,
+                paid: salaryData?.paid || false,
+                date: salaryData?.date,
+              },
+            }));
+          });
+          salaryUnsubscribers.push(salaryUnsub);
+
+          // Listen for accumulated salary for this employee
+          const unsub = listenAccumulatedSalary(employeeId, accumulated => {
+            setAccumulatedSalaries(prev => ({
+              ...prev,
+              [employeeId]: accumulated,
+            }));
+          });
+          salaryUnsubscribers.push(unsub);
+        });
+        setEmployees(employeeList);
+        // Clean up salary listeners on unmount
+        return () => salaryUnsubscribers.forEach(unsub => unsub());
+      },
+      error => {
+        console.error('Firestore connection error:', error);
+        Alert.alert(
+          'Database Error',
+          'Unable to connect to the database. Please check your internet connection and try again.',
+        );
+      },
+    );
+
+    return () => {
+      console.log('Cleaning up Firestore listeners');
+      unsubscribe();
+    };
   }, []);
 
   // Filter and sort the data based on search text and sort option
@@ -246,23 +371,23 @@ const Dashboard = () => {
                 }}>
                 {item.name}
               </Text>
-              <Text
-                style={{
-                  fontFamily: FONTS.PR,
-                  fontSize: SIZES.xs,
-                  color: COLORS.black,
-                  textAlign: 'center',
-                }}>
-                ₹{item.salaryAmount} / m
-              </Text>
+                <Text
+                  style={{
+                    fontFamily: FONTS.PR,
+                    fontSize: SIZES.xs,
+                    color: COLORS.black,
+                    textAlign: 'center',
+                  }}>
+                  ₹{item.salaryAmount} / m
+                </Text>
             </View>
             <Text style={styles.tableCell}>₹{item.totalAdvance}</Text>
-            <Text style={styles.tableCell}>
-              ₹
-              {accumulatedSalaries[item.id] !== undefined
-                ? accumulatedSalaries[item.id]
-                : '--'}
-            </Text>
+              <Text style={styles.tableCell}>
+                ₹
+                {accumulatedSalaries[item.id] !== undefined
+                  ? accumulatedSalaries[item.id]
+                  : '--'}
+              </Text>
           </TouchableOpacity>
         )}
         style={styles.tableContainer}

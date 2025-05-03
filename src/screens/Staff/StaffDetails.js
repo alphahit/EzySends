@@ -64,6 +64,9 @@ const StaffDetails = ({route}) => {
   const [showTransactionActions, setShowTransactionActions] = useState(false);
   const [showSalaryPaidModal, setShowSalaryPaidModal] = useState(false);
   const [isSalaryPaid, setIsSalaryPaid] = useState(false);
+  const [actualPayDate, setActualPayDate] = useState(null);
+  const [cashAmount, setCashAmount] = useState('');
+  const [bankAmount, setBankAmount] = useState('');
 
   const handleFilterSelect = filter => {
     setTypeFilter(filter);
@@ -234,8 +237,6 @@ const StaffDetails = ({route}) => {
     setNewAdvanceAmount(selectedTransaction.amount.toString());
   };
 
-  // Restore actualPayDate state and save logic
-  const [actualPayDate, setActualPayDate] = useState(null);
   const handleSaveActualPayDate = useCallback(async () => {
     if (!selectedTransaction || !actualPayDate) {
       Alert.alert('Error', 'Transaction or date not selected');
@@ -253,31 +254,39 @@ const StaffDetails = ({route}) => {
 
       if (!isSalaryPaid) {
         setActualPayDate(null);
+        setCashAmount('');
+        setBankAmount('');
         await updateDoc(transactionRef, {
           paid: isSalaryPaid,
           actualPayDate: null,
+          cashAmount: null,
+          bankAmount: null,
         });
         Alert.alert('Pay Date Removed.');
       } else {
         await updateDoc(transactionRef, {
           paid: isSalaryPaid,
           actualPayDate: actualPayDate,
+          cashAmount: cashAmount || '0',
+          bankAmount: bankAmount || '0',
         });
-        Alert.alert('Actual Pay Date Saved.');
+        Alert.alert('Payment Details Saved.');
       }
 
       setShowSalaryPaidModal(false);
     } catch (error) {
       console.error(
-        '[handleSaveActualPayDate] Error updating actualPayDate:',
+        '[handleSaveActualPayDate] Error updating payment details:',
         error,
       );
-      Alert.alert('Error', 'Failed to save actual pay date');
+      Alert.alert('Error', 'Failed to save payment details');
     }
   }, [
     selectedTransaction,
     actualPayDate,
     isSalaryPaid,
+    cashAmount,
+    bankAmount,
     setShowSalaryPaidModal,
   ]);
 
@@ -300,6 +309,8 @@ const StaffDetails = ({route}) => {
         }
       }
       setActualPayDate(date);
+      setCashAmount(transaction.cashAmount || '');
+      setBankAmount(transaction.bankAmount || '');
       setShowSalaryPaidModal(true);
     }
   };
@@ -444,13 +455,16 @@ const StaffDetails = ({route}) => {
       />
 
       {/* Salary Paid Status Modal */}
-      {/* Salary Paid Status Modal */}
       <SalaryPaidModal
         visible={showSalaryPaidModal}
         isSalaryPaid={isSalaryPaid}
         setIsSalaryPaid={setIsSalaryPaid}
         actualPayDate={actualPayDate}
         setActualPayDate={setActualPayDate}
+        cashAmount={cashAmount}
+        setCashAmount={setCashAmount}
+        bankAmount={bankAmount}
+        setBankAmount={setBankAmount}
         onClose={() => setShowSalaryPaidModal(false)}
         onSave={handleSaveActualPayDate}
         styles={styles}

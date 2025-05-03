@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "877636894288",
-    "project_id": "employeemanagement-77139",
-    "storage_bucket": "employeemanagement-77139.firebasestorage.app"
+    "project_number": "1063844707613",
+    "project_id": "salary-app-79a41",
+    "storage_bucket": "salary-app-79a41.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:877636894288:android:4daaed57da5ca229641b55",
+        "mobilesdk_app_id": "1:1063844707613:android:ef9c94892a29abde7ef5f4",
         "android_client_info": {
           "package_name": "com.employeemanagement"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyBDhjaw3GZHP13e7padj_IX8TLvFdnL7Po"
+          "current_key": "AIzaSyDanV1_k-8Dh7VP8W0HPOEmr4y-Qq8d_iw"
         }
       ],
       "services": {

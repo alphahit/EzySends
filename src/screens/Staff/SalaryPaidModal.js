@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Modal, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, Modal, StyleSheet, TextInput } from 'react-native';
 import DatePicker from 'react-native-date-picker';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { COLORS, SIZES, FONTS, RH, RW } from '../../theme';
@@ -12,6 +12,10 @@ const SalaryPaidModal = ({
   setActualPayDate,
   onClose,
   onSave,
+  cashAmount,
+  setCashAmount,
+  bankAmount,
+  setBankAmount,
 }) => {
   const [showDatePicker, setShowDatePicker] = useState(false);
 
@@ -71,6 +75,30 @@ const SalaryPaidModal = ({
               }}
               onCancel={() => setShowDatePicker(false)}
             />
+          </View>
+          
+          <View style={styles.amountContainer}>
+            <View style={styles.amountInputWrapper}>
+              <Text style={styles.paidStatusLabel}>Cash Amount</Text>
+              <TextInput
+                style={styles.amountInput}
+                value={cashAmount}
+                onChangeText={setCashAmount}
+                placeholder="0"
+                keyboardType="numeric"
+              />
+            </View>
+            
+            <View style={styles.amountInputWrapper}>
+              <Text style={styles.paidStatusLabel}>Bank Amount</Text>
+              <TextInput
+                style={styles.amountInput}
+                value={bankAmount}
+                onChangeText={setBankAmount}
+                placeholder="0"
+                keyboardType="numeric"
+              />
+            </View>
           </View>
 
           <View style={styles.modalButtonContainer}>
@@ -153,6 +181,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#f5f5f5',
     borderRadius: RW(4),
+  },
+  amountContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginTop: RH(16),
+  },
+  amountInputWrapper: {
+    width: '48%',
+  },
+  amountInput: {
+    marginTop: RH(8),
+    padding: RW(12),
+    backgroundColor: '#f5f5f5',
+    borderRadius: RW(4),
+    fontFamily: FONTS.PR,
+    fontSize: SIZES.xs,
+    color: COLORS.black,
   },
   modalButtonContainer: {
     flexDirection: 'row',
