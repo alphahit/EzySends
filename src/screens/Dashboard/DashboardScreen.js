@@ -1,0 +1,281 @@
+import { DrawerActions } from '@react-navigation/native';
+import React, { useState } from 'react';
+import {
+  Alert,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import Drawer from '../../assets/svg/drawer.svg';
+import FwdIcon from '../../assets/svg/fwd.svg';
+import ImportIcon from '../../assets/svg/import.svg';
+import PayoutIcon from '../../assets/svg/payout.svg';
+import PlusWhite from '../../assets/svg/plusWhite.svg';
+import RvpIcon from '../../assets/svg/rvp.svg';
+import StaffIcon from '../../assets/svg/staff.svg';
+import AppHeader from '../../components/AppHeader/AppHeader';
+import AppText from '../../components/AppText/AppText';
+import ConfirmModal from '../../components/ConfirmModal/ConfirmModal';
+import DashboardBox from '../../components/DashboardBox/DashboardBox';
+import { COLORS, FONTS, RH, RHA, RPH } from '../../theme';
+// For the icons, we would typically import them from a library like react-native-vector-icons
+// For this example, I'll create placeholders
+
+const DashboardScreen = ({navigation}) => {
+  const [isModalVisible, setModalVisible] = useState(false);
+
+  const handleLogout = () => {
+    // perform your logout logic here
+    console.log('Logged out!');
+    setModalVisible(false);
+  };
+  const iconSize = RPH(24);
+
+  const handleMenuPress = () => {
+    navigation.dispatch(DrawerActions.toggleDrawer());
+  };
+
+  const handleNotificationsPress = () => {
+    Alert.alert('Notifications Pressed!');
+  };
+
+  const navigateToAddStaff = () => {
+    navigation.navigate('Staff Database', {
+      screen: 'AddStaff',
+    });
+  };
+
+  const navigateToAddHub = () => {
+    navigation.navigate('Hub Database', {
+      screen: 'AddHub',
+    });
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <AppHeader
+        title="Dashboard"
+        // --- Pass SVG components directly ---
+        leftIcon={
+          <Drawer
+            width={iconSize}
+            height={iconSize}
+            fill={COLORS.tableTextDark} // Control SVG color via fill/stroke props
+          />
+        }
+        onPressLeft={handleMenuPress}
+
+        // --- ---
+      />
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}>
+        {/* Dashboard Stats Row 1 */}
+        <View style={styles.statsRow}>
+          <DashboardBox
+            title="Staff"
+            value="380"
+            icon={
+              <StaffIcon
+                width={iconSize}
+                height={iconSize}
+                fill={COLORS.whiteText}
+              />
+            }
+            backgroundColor={COLORS.primaryColor}
+            disabled={false}
+            // onPress={navigateToStaffTable}
+          />
+
+          <DashboardBox
+            title="Payout"
+            value="₹380"
+            icon={
+              <PayoutIcon
+                width={iconSize}
+                height={iconSize}
+                fill={COLORS.whiteText}
+              />
+            }
+            backgroundColor={COLORS.primaryColor}
+          />
+        </View>
+        {/* Dashboard Stats Row 2 */}
+        <View style={styles.statsRow}>
+          <DashboardBox
+            title="FWD"
+            value="380"
+            icon={
+              <FwdIcon
+                width={iconSize}
+                height={iconSize}
+                fill={COLORS.whiteText}
+              />
+            }
+            backgroundColor={COLORS.primaryColor}
+          />
+
+          <DashboardBox
+            title="RVP"
+            value="380"
+            icon={
+              <RvpIcon
+                width={iconSize}
+                height={iconSize}
+                fill={COLORS.whiteText}
+              />
+            }
+            backgroundColor={COLORS.primaryColor}
+          />
+        </View>
+        <View style={styles.statsRow}>
+          <DashboardBox
+            title="FWD"
+            value="Import Today Data"
+            icon={
+              <ImportIcon
+                width={iconSize}
+                height={iconSize}
+                fill={COLORS.whiteText}
+              />
+            }
+            backgroundColor={COLORS.primaryColor}
+            disabled={false}
+            largeText={false}
+            headerText={false}
+            onPress={() => {
+              console.log('Test ---->');
+            }}
+          />
+
+          <View style={{width: '47%', gap: RHA(16)}}>
+            <TouchableOpacity
+              style={styles.fabButton}
+              onPress={navigateToAddStaff}>
+              <PlusWhite
+                width={iconSize}
+                height={iconSize}
+                fill={COLORS.whiteText}
+              />
+              <AppText style={styles.buttonText}>Staff</AppText>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.fabButton}
+              onPress={navigateToAddHub}>
+              <PlusWhite
+                width={iconSize}
+                height={iconSize}
+                fill={COLORS.whiteText}
+              />
+              <AppText style={styles.buttonText}>Hub</AppText>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={[styles.dtcontainer]}>
+          <View>
+            <AppText style={styles.dateText}>Date</AppText>
+            <AppText style={styles.dateText}>12 Aug 2025</AppText>
+          </View>
+
+          <View>
+            <AppText style={styles.dateText}>TimeStamp</AppText>
+            <AppText style={styles.timeText}>12:00:25</AppText>
+          </View>
+        </View>
+      </ScrollView>
+
+      <ConfirmModal
+        visible={isModalVisible}
+        onClose={() => setModalVisible(false)}
+        title="Logout"
+        message="Are you sure you want to logout?"
+        actions={[
+          {
+            label: 'YES',
+            onPress: handleLogout,
+            backgroundColor: '#274940', // primary color
+            textColor: '#FFFFFF',
+          },
+          {
+            label: 'NO',
+            onPress: () => setModalVisible(false),
+            backgroundColor: '#C5C5C5', // secondary color
+            textColor: '#FFFFFF',
+          },
+        ]}
+      />
+    </SafeAreaView>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.screenBackgroundColor,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    padding: RPH(20),
+  },
+
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: RHA(20),
+    gap: '3%',
+  },
+  actionContainer: {
+    marginTop: RH(10),
+    gap: RHA(15),
+  },
+  dtcontainer: {
+    width: '100%',
+    height: RHA(44),
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    position: 'absolute',
+    bottom: RHA(22),
+    alignSelf: 'center',
+  },
+  dateText: {
+    fontFamily: FONTS.PM,
+    fontWeight: '400',
+    fontSize: RHA(12),
+    lineHeight: RHA(18),
+    color: '#272727',
+  },
+  timeText: {
+    fontFamily: FONTS.PM,
+    fontWeight: '400',
+    fontSize: RHA(12),
+    lineHeight: RHA(18),
+    textAlign: 'right',
+    color: '#272727',
+  },
+  fabButton: {
+    height: RPH(50),
+    flexDirection: 'row',
+    backgroundColor: COLORS.primaryColor,
+    paddingLeft: RPH(15),
+    alignItems: 'center',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
+  },
+  buttonText: {
+    color: COLORS.whiteText,
+    marginLeft: RPH(8),
+  },
+});
+
+export default DashboardScreen;

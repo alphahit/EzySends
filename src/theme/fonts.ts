@@ -3,29 +3,27 @@ import {
   moderateVerticalScale as RHA,
   moderateScale as RPH,
   scale as RW,
-} from "react-native-size-matters";
+} from 'react-native-size-matters';
 
 export const FONTS = {
-  PB: "Poppins-Bold",
-  PEB: "Poppins-ExtraBold",
-  PL: "Poppins-Light",
-  PM: "Poppins-Medium",
-  PR: "Poppins-Regular",
-  PSB: "Poppins-SemiBold",
+  PL: 'Poppins-Light', // 300
+  PR: 'Poppins-Regular', // 400
+  PM: 'Poppins-Medium', // 500
+  PSM: 'Poppins-SemiBold', // 600
+  PB: 'Poppins-Bold', // 700
+  PEB: 'Poppins-ExtraBold', // 800
 };
 
-const RT = (size: any) => RW(size);
-
 export const SIZES = {
-  xs: RW(11),
-  s: RW(13),
-  sl: RW(14),
-  sm: RW(16),
-  m: RW(18),
+  xs: RW(12),
+  s: RW(14),
+  m: RW(16),
+  ml: RW(18),
   l: RW(20),
-  xl: RW(25),
-  xxl: RW(29),
+  xl: RW(22),
+  xml: RW(24),
+  xxl: RW(26),
   xxxl: RW(31),
 };
 
-export { RW, RH, RPH, RHA, RT };
+export {RW, RH, RPH, RHA};
