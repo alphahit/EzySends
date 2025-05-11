@@ -1,5 +1,5 @@
-import { DrawerActions } from '@react-navigation/native';
-import React, { useState } from 'react';
+import {DrawerActions} from '@react-navigation/native';
+import React, {useEffect, useState} from 'react';
 import {
   Alert,
   SafeAreaView,
@@ -19,13 +19,14 @@ import AppHeader from '../../components/AppHeader/AppHeader';
 import AppText from '../../components/AppText/AppText';
 import ConfirmModal from '../../components/ConfirmModal/ConfirmModal';
 import DashboardBox from '../../components/DashboardBox/DashboardBox';
-import { COLORS, FONTS, RH, RHA, RPH } from '../../theme';
+import {COLORS, FONTS, RH, RHA, RPH} from '../../theme';
+import {getStaffDataFromFirestore} from '../../firebase/firebaseFunctions';
 // For the icons, we would typically import them from a library like react-native-vector-icons
 // For this example, I'll create placeholders
 
 const DashboardScreen = ({navigation}) => {
   const [isModalVisible, setModalVisible] = useState(false);
-
+  const [staftData, setStaffData] = useState([]);
   const handleLogout = () => {
     // perform your logout logic here
     console.log('Logged out!');
@@ -52,7 +53,21 @@ const DashboardScreen = ({navigation}) => {
       screen: 'AddHub',
     });
   };
-
+  const handlegetStaffData = async () => {
+    try {
+      const res = await getStaffDataFromFirestore();
+      console.log('Staff Data:', res);
+      if(res?.length > 0) {
+        setStaffData(res);
+      }
+    } catch (error) {
+      console.error('Error fetching staff data:', error);
+      Alert.alert('Error', 'Failed to fetch staff data.');
+    }
+  };
+  useEffect(() => {
+    handlegetStaffData();
+  }, []);
   return (
     <SafeAreaView style={styles.container}>
       <AppHeader
@@ -76,7 +91,7 @@ const DashboardScreen = ({navigation}) => {
         <View style={styles.statsRow}>
           <DashboardBox
             title="Staff"
-            value="380"
+            value={staftData?.length}
             icon={
               <StaffIcon
                 width={iconSize}

@@ -1,6 +1,6 @@
-import { createDrawerNavigator } from '@react-navigation/drawer';
-import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import {createDrawerNavigator} from '@react-navigation/drawer';
+import {NavigationContainer} from '@react-navigation/native';
+import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import React from 'react';
 
 import AddHubScreen from '../screens/AddHubScreen/AddHubScreen';
@@ -13,6 +13,7 @@ import StaffDetail from '../screens/StaffDetail/StaffDetail';
 import CustomDrawerContent from './CustomDrawerContent';
 import ResetPasswordScreen from '../screens/ResetPasswordScreen/ResetPasswordScreen';
 import DragAndDrop from '../screens/Test/DragAndDrop';
+import {useSelector} from 'react-redux';
 
 const Stack = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
@@ -20,6 +21,7 @@ const Drawer = createDrawerNavigator();
 function MainStack() {
   return (
     <Stack.Navigator
+      initialRouteName="DashboardScreen"
       screenOptions={{
         headerShown: false,
       }}>
@@ -34,6 +36,7 @@ function MainStack() {
 function StaffStack() {
   return (
     <Stack.Navigator
+      initialRouteName="StaffTable"
       screenOptions={{
         headerShown: false,
       }}>
@@ -46,7 +49,9 @@ function StaffStack() {
 
 function HubStack() {
   return (
-    <Stack.Navigator screenOptions={{headerShown: false}}>
+    <Stack.Navigator
+      initialRouteName="HubTable"
+      screenOptions={{headerShown: false}}>
       <Stack.Screen name="HubTable" component={HubTable} />
       <Stack.Screen name="AddHub" component={AddHubScreen} />
     </Stack.Navigator>
@@ -88,16 +93,17 @@ function DrawerNavigator() {
 }
 
 export default function AppNavigator() {
+  const {isLoggedIn} = useSelector(state => state.login);
+  console.log('isLoggedIn', isLoggedIn);
   return (
     <NavigationContainer>
       <Stack.Navigator
-        initialRouteName="Login"
+        initialRouteName={isLoggedIn ? 'MainApp' : 'Login'}
         screenOptions={{
           headerShown: false,
         }}>
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="DragAndDrop" component={DragAndDrop} />
-        
         <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
         <Stack.Screen name="MainApp" component={DrawerNavigator} />
       </Stack.Navigator>

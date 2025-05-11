@@ -3,6 +3,8 @@ import { createSlice } from '@reduxjs/toolkit';
 const initialState = {
   isLoggedIn: false,
   accessToken: null,
+  userId: null,
+  userEmail: null,
 };
 
 const loginSlice = createSlice({
@@ -11,11 +13,15 @@ const loginSlice = createSlice({
   reducers: {
     loginSuccess(state, action) {
       state.isLoggedIn = true;
-      state.accessToken = action.payload;
+      state.accessToken = action.payload.accessToken;
+      state.userId = action.payload.userId;
+      state.userEmail = action.payload.userEmail;
     },
     logout(state) {
       state.isLoggedIn = false;
       state.accessToken = null;
+      state.userId = null;
+      state.userEmail = null;
     },
   },
 });

@@ -19,6 +19,7 @@ import AppHeader from '../../components/AppHeader/AppHeader';
 import Back from '../../assets/svg/back.svg';
 import Calendar from '../../assets/svg/calendar.svg';
 import {COLORS} from '../../theme/colors';
+import {saveStaffDataToFirestore} from '../../firebase/firebaseFunctions';
 
 const AddStaffScreen = ({navigation, route}) => {
   const {mode = 'create', editData} = route.params || {};
@@ -62,7 +63,7 @@ const AddStaffScreen = ({navigation, route}) => {
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (
       !formData.name ||
       !formData.contactNumber ||
@@ -71,21 +72,41 @@ const AddStaffScreen = ({navigation, route}) => {
       Alert.alert('Error', 'Please fill all required fields');
       return;
     }
-    if (mode === 'view') {
-      console.log('Staff updated:', formData);
-      Alert.alert('Success', 'Staff updated successfully!', [
-        {text: 'OK', onPress: () => setIsEditing(false)},
-      ]);
-    } else if (mode === 'edit') {
-      console.log('Staff updated:', formData);
-      Alert.alert('Success', 'Staff updated successfully!', [
-        {text: 'OK', onPress: () => navigation.goBack()},
-      ]);
-    } else {
-      console.log('Staff created:', formData);
-      Alert.alert('Success', 'Staff added successfully!', [
-        {text: 'OK', onPress: () => navigation.goBack()},
-      ]);
+
+    const staffData = {
+      name: formData.name,
+      contactNumber: formData.contactNumber,
+      emergencyContact: formData.emergencyContact,
+      dob: formData.dob,
+      gmail: formData.gmail,
+      panNumber: formData.panNumber,
+      aadhaarNumber: formData.aadhaarNumber,
+      joiningDate: formData.joiningDate,
+      createdAt: new Date().toISOString(),
+    };
+
+    try {
+      if (mode === 'create') {
+        await saveStaffDataToFirestore(staffData);
+        navigation.goBack();
+        setFormData({
+          name: '',
+          contactNumber: '',
+          emergencyContact: '',
+          dob: '',
+          gmail: '',
+          panNumber: '',
+          aadhaarNumber: '',
+          joiningDate: '',
+        });
+      } else if (mode === 'edit') {
+        console.log('Staff updated:', formData);
+        Alert.alert('Success', 'Staff updated successfully!', [
+          {text: 'OK', onPress: () => navigation.goBack()},
+        ]);
+      }
+    } catch (error) {
+      console.error('Error handling submit:', error);
     }
   };
 
