@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   View,
   StyleSheet,
@@ -16,12 +16,20 @@ import AppTextInput from '../../components/AppTextInput';
 import AppHeader from '../../components/AppHeader/AppHeader';
 import Back from '../../assets/svg/back.svg';
 import Calendar from '../../assets/svg/calendar.svg';
-import { COLORS } from '../../theme/colors';
+import {COLORS} from '../../theme/colors';
+import {
+  saveHubDataToFirestore,
+  updateHubDataInFirestore,
+} from '../../firebase/firebaseFunctions';
+import DatePicker from 'react-native-date-picker';
 
-const AddHubScreen = ({ navigation, route }) => {
-  const { mode = 'create', editData } = route.params || {};
+const AddHubScreen = ({navigation, route}) => {
+  const {mode = 'create', editData} = route.params || {};
   // Internal editing state for view mode
   const [isEditing, setIsEditing] = useState(mode === 'edit');
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [tempDate, setTempDate] = useState(new Date());
+  const [dateField, setDateField] = useState(null);
 
   const [formData, setFormData] = useState({
     hubName: '',
@@ -54,34 +62,78 @@ const AddHubScreen = ({ navigation, route }) => {
   const isCreate = mode === 'create';
 
   const handleChange = (key, value) => {
-    if (!isView) setFormData({ ...formData, [key]: value });
+    if (!isView) setFormData({...formData, [key]: value});
   };
 
-  const handleSubmit = () => {
-    const { hubName, hubCode, startingDate } = formData;
-    if (!hubName || !hubCode || !startingDate) {
+  const handleSubmit = async () => {
+    const {
+      hubName,
+      hubCode,
+      startingDate,
+      location,
+      contactNumber,
+      managerName,
+      capacity,
+    } = formData;
+
+    // Validate required fields
+    if (!hubName || !hubCode) {
       Alert.alert('Error', 'Please fill all required fields');
       return;
     }
-    if (mode === 'view') {
-      // Save after edit
-      console.log('Hub updated:', formData);
-      Alert.alert('Success', 'Hub updated successfully!', [
-        { text: 'OK', onPress: () => setIsEditing(false) },
-      ]);
-    } else if (mode === 'edit') {
-      console.log('Hub updated:', formData);
-      Alert.alert('Success', 'Hub updated successfully!', [
-        { text: 'OK', onPress: () => navigation.goBack() },
-      ]);
-    } else {
-      console.log('Hub created:', formData);
-      Alert.alert('Success', 'Hub added successfully!', [
-        { text: 'OK', onPress: () => navigation.goBack() },
-      ]);
+
+    const hubData = {
+      hubName,
+      hubCode,
+      startingDate,
+      location,
+      contactNumber,
+      managerName,
+      capacity,
+      updatedAt: new Date().toISOString(),
+    };
+
+    try {
+      if (mode === 'create') {
+        await saveHubDataToFirestore(hubData);
+        setFormData({
+          hubName: '',
+          hubCode: '',
+          startingDate: '',
+          location: '',
+          contactNumber: '',
+          managerName: '',
+          capacity: '',
+        });
+
+        Alert.alert('Success', 'Hub added successfully!', [
+          {
+            text: 'OK',
+            onPress: () => {
+              navigation.navigate('Hub Database', {
+                screen: 'HubTable'
+              });
+            },
+          },
+        ]);
+      } else if (mode === 'edit') {
+        await updateHubDataInFirestore(editData.docId, hubData);
+        Alert.alert('Success', 'Hub updated successfully!', [
+          {
+            text: 'OK',
+            onPress: () => {
+              navigation.navigate('Hub Database', {
+                screen: 'HubTable'
+              });
+            },
+          },
+        ]);
+      }
+    } catch (error) {
+      console.error('Error saving hub data:', error.message);
+      Alert.alert('Error', 'Failed to save hub data. Please try again.');
     }
   };
-
   const handleCancel = () => {
     if (mode === 'view' && isEditing) {
       // cancel edit: revert and back to view
@@ -109,13 +161,39 @@ const AddHubScreen = ({ navigation, route }) => {
       ? 'Edit Hub'
       : 'Hub Details';
 
+  const handleDatePress = (field) => {
+    if (!isView) {
+      setDateField(field);
+      setTempDate(
+        formData[field]
+          ? new Date(
+              formData[field].split('-').reverse().join('-')
+            )
+          : new Date(),
+      );
+      setShowDatePicker(true);
+    }
+  };
+
+  // helper to format as "DD-MM-YYYY"
+  const formatDate = date => {
+    const d = date.getDate().toString().padStart(2, '0');
+    const m = (date.getMonth() + 1).toString().padStart(2, '0');
+    const y = date.getFullYear().toString();
+    return `${d}-${m}-${y}`;
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <AppHeader
         title={headerTitle}
         leftIcon={
           <View style={styles.iconContainer}>
-            <Back width={iconSize} height={iconSize} fill={COLORS.tableTextDark} />
+            <Back
+              width={iconSize}
+              height={iconSize}
+              fill={COLORS.tableTextDark}
+            />
           </View>
         }
         onPressLeft={handleBackPress}
@@ -124,8 +202,7 @@ const AddHubScreen = ({ navigation, route }) => {
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
+        showsVerticalScrollIndicator={false}>
         {/* Hub Name */}
         <AppTextInput
           label="Hub Name"
@@ -145,14 +222,19 @@ const AddHubScreen = ({ navigation, route }) => {
         />
 
         {/* Starting Date */}
-        <AppTextInput
-          label="Starting Date"
-          placeholder="Select starting date"
-          value={formData.startingDate}
-          editable={false}
-          rightIcon={<Calendar width={24} height={24} fill={COLORS.primaryDark} />}
-          onRightIconPress={() => !isView && !isCreate && console.log('Open date picker')}
-        />
+        <TouchableOpacity
+          onPress={() => handleDatePress('startingDate')}
+          disabled={isView}>
+          <AppTextInput
+            label="Starting Date"
+            placeholder="Select starting date"
+            value={formData.startingDate}
+            editable={false}
+            rightIcon={
+              <Calendar width={24} height={24} fill={COLORS.primaryDark} />
+            }
+          />
+        </TouchableOpacity>
 
         {/* Location */}
         <AppTextInput
@@ -195,34 +277,69 @@ const AddHubScreen = ({ navigation, route }) => {
         <View style={styles.buttonContainer}>
           {/** Primary btn **/}
           {(isCreate || isEditing || mode === 'edit') && (
-            <TouchableOpacity style={[styles.button, styles.primaryButton]} onPress={handleSubmit}>
+            <TouchableOpacity
+              style={[styles.button, styles.primaryButton]}
+              onPress={handleSubmit}>
               <AppText style={styles.buttonText}>
-                {(mode === 'create' && 'ADD') || (mode === 'edit' && 'UPDATE') || (isEditing && 'SAVE')}
+                {(mode === 'create' && 'ADD') ||
+                  (mode === 'edit' && 'UPDATE') ||
+                  (isEditing && 'SAVE')}
               </AppText>
             </TouchableOpacity>
           )}
 
           {/** Secondary btn **/}
-          <TouchableOpacity style={[styles.button, styles.secondaryButton, isView && {marginLeft:0}]} onPress={isView ? handleEdit : handleCancel}>
+          <TouchableOpacity
+            style={[
+              styles.button,
+              styles.secondaryButton,
+              isView && {marginLeft: 0},
+            ]}
+            onPress={isView ? handleEdit : handleCancel}>
             <AppText style={styles.buttonText}>
-              {isView ? 'EDIT' : (isEditing && 'CANCEL') || (mode === 'create' && 'CANCEL') || (mode === 'edit' && 'CANCEL')}
+              {isView
+                ? 'EDIT'
+                : (isEditing && 'CANCEL') ||
+                  (mode === 'create' && 'CANCEL') ||
+                  (mode === 'edit' && 'CANCEL')}
             </AppText>
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      <DatePicker
+        modal
+        open={showDatePicker}
+        date={tempDate}
+        mode="date"
+        onConfirm={date => {
+          setShowDatePicker(false);
+          handleChange(dateField, formatDate(date));
+        }}
+        onCancel={() => setShowDatePicker(false)}
+      />
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
-  scrollView: { flex: 1 },
-  scrollContent: { paddingHorizontal: RPH(25), paddingBottom: RHA(40) },
-  buttonContainer: { flexDirection: 'row', justifyContent: 'space-between', marginTop: RHA(30) },
-  button: { flex: 1, height: RHA(43), justifyContent: 'center', alignItems: 'center' },
-  primaryButton: { backgroundColor: '#274940', marginRight: RPH(14) },
-  secondaryButton: { backgroundColor: '#C5C5C5', marginLeft: RPH(14) },
-  buttonText: { color: '#FFFFFF', fontSize: RHA(16), textTransform: 'uppercase' },
+  container: {flex: 1, backgroundColor: '#FFFFFF'},
+  scrollView: {flex: 1},
+  scrollContent: {paddingHorizontal: RPH(25), paddingBottom: RHA(40)},
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: RHA(30),
+  },
+  button: {
+    flex: 1,
+    height: RHA(43),
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  primaryButton: {backgroundColor: '#274940', marginRight: RPH(14)},
+  secondaryButton: {backgroundColor: '#C5C5C5', marginLeft: RPH(14)},
+  buttonText: {color: '#FFFFFF', fontSize: RHA(16), textTransform: 'uppercase'},
   iconContainer: {
     backgroundColor: COLORS.primaryColor,
     width: RPH(40),

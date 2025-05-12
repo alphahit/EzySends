@@ -1,4 +1,6 @@
 import React, {useState, useEffect} from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import { fetchHubs } from '../../store/hubSlice';
 import {
   View,
   StyleSheet,
@@ -6,6 +8,8 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  Modal,
+  Switch,
 } from 'react-native';
 import {
   moderateVerticalScale as RHA,
@@ -19,10 +23,21 @@ import AppHeader from '../../components/AppHeader/AppHeader';
 import Back from '../../assets/svg/back.svg';
 import Calendar from '../../assets/svg/calendar.svg';
 import {COLORS} from '../../theme/colors';
+import {
+  saveStaffDataToFirestore,
+  updateStaffDataInFirestore,
+} from '../../firebase/firebaseFunctions';
 
 const AddStaffScreen = ({navigation, route}) => {
   const {mode = 'create', editData} = route.params || {};
   const [isEditing, setIsEditing] = useState(mode === 'edit');
+  const [showHubModal, setShowHubModal] = useState(false);
+  const dispatch = useDispatch();
+  const { hubs } = useSelector(state => state.hub);
+
+  useEffect(() => {
+    dispatch(fetchHubs());
+  }, [dispatch]);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -33,22 +48,38 @@ const AddStaffScreen = ({navigation, route}) => {
     panNumber: '',
     aadhaarNumber: '',
     joiningDate: '',
+    hub: { hubId: '', hubName: '' },
+    beneficiaryName: '',
+    accountNumber: '',
+    ifsc: '',
+    bankName: '',
+    accountUsername: '',
+    accountPassword: '',
+    isAccountActive: false,
+    perFwd: '',
+    perRvp: '',
   });
   const [originalData, setOriginalData] = useState(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [tempDate, setTempDate] = useState(new Date());
   const [dateField, setDateField] = useState(null);
 
-  // helper to format as "DD-MM-YY"
+  // helper to format as "DD-MM-YYYY"
   const formatDate = date => {
     const d = date.getDate().toString().padStart(2, '0');
     const m = (date.getMonth() + 1).toString().padStart(2, '0');
-    const y = date.getFullYear().toString().slice(-2);
+    const y = date.getFullYear().toString();
     return `${d}-${m}-${y}`;
   };
   useEffect(() => {
     if (editData) {
-      setFormData(editData);
+      // If editing, ensure hub is an object with hubId and hubName
+      setFormData({
+        ...editData,
+        hub: editData.hub && typeof editData.hub === 'object'
+          ? editData.hub
+          : { hubId: '', hubName: editData.hub || '' },
+      });
       setOriginalData(editData);
     }
   }, [editData]);
@@ -62,30 +93,85 @@ const AddStaffScreen = ({navigation, route}) => {
     }
   };
 
-  const handleSubmit = () => {
+  const handleDatePress = (field) => {
+    if (!isView) {
+      setDateField(field);
+      setTempDate(
+        formData[field]
+          ? new Date(
+              formData[field].split('-').reverse().join('-')
+            )
+          : new Date(),
+      );
+      setShowDatePicker(true);
+    }
+  };
+
+  const handleSubmit = async () => {
     if (
       !formData.name ||
       !formData.contactNumber ||
-      !formData.emergencyContact
+      !formData.emergencyContact ||
+      !formData.accountNumber
     ) {
       Alert.alert('Error', 'Please fill all required fields');
       return;
     }
-    if (mode === 'view') {
-      console.log('Staff updated:', formData);
-      Alert.alert('Success', 'Staff updated successfully!', [
-        {text: 'OK', onPress: () => setIsEditing(false)},
-      ]);
-    } else if (mode === 'edit') {
-      console.log('Staff updated:', formData);
-      Alert.alert('Success', 'Staff updated successfully!', [
-        {text: 'OK', onPress: () => navigation.goBack()},
-      ]);
-    } else {
-      console.log('Staff created:', formData);
-      Alert.alert('Success', 'Staff added successfully!', [
-        {text: 'OK', onPress: () => navigation.goBack()},
-      ]);
+
+    const staffData = {
+      ...formData,
+      updatedAt: new Date().toISOString(),
+    };
+
+    try {
+      if (mode === 'create') {
+        await saveStaffDataToFirestore(staffData);
+        setFormData({
+          name: '',
+          contactNumber: '',
+          emergencyContact: '',
+          dob: '',
+          gmail: '',
+          panNumber: '',
+          aadhaarNumber: '',
+          joiningDate: '',
+          hub: '',
+          beneficiaryName: '',
+          accountNumber: '',
+          ifsc: '',
+          bankName: '',
+          accountUsername: '',
+          accountPassword: '',
+          isAccountActive: false,
+          perFwd: '',
+          perRvp: '',
+        });
+        Alert.alert('Success', 'Staff added successfully!', [
+          {
+            text: 'OK',
+            onPress: () => {
+              navigation.navigate('Staff Database', {
+                screen: 'StaffTable'
+              });
+            },
+          },
+        ]);
+      } else if (mode === 'edit') {
+        await updateStaffDataInFirestore(editData.docId, staffData);
+        Alert.alert('Success', 'Staff updated successfully!', [
+          {
+            text: 'OK',
+            onPress: () => {
+              navigation.navigate('Staff Database', {
+                screen: 'StaffTable'
+              });
+            },
+          },
+        ]);
+      }
+    } catch (error) {
+      console.error('Error handling submit:', error);
+      Alert.alert('Error', 'Failed to save staff data. Please try again.');
     }
   };
 
@@ -156,30 +242,19 @@ const AddStaffScreen = ({navigation, route}) => {
           editable={isCreate || isEditing || mode === 'edit'}
         />
 
-        <AppTextInput
-          label="D.O.B"
-          placeholder="Select date of birth"
-          value={formData.dob}
-          editable={false}
-          rightIcon={
-            <Calendar width={24} height={24} fill={COLORS.primaryDark} />
-          }
-          onRightIconPress={() => {
-            if (!isView) {
-              setDateField('dob');
-              setTempDate(
-                formData.dob
-                  ? new Date(
-                      `20${formData.dob.slice(-2)}`,
-                      parseInt(formData.dob.slice(3, 5), 10) - 1,
-                      parseInt(formData.dob.slice(0, 2), 10),
-                    )
-                  : new Date(),
-              );
-              setShowDatePicker(true);
+        <TouchableOpacity
+          onPress={() => handleDatePress('dob')}
+          disabled={isView}>
+          <AppTextInput
+            label="D.O.B"
+            placeholder="Select date of birth"
+            value={formData.dob}
+            editable={false}
+            rightIcon={
+              <Calendar width={24} height={24} fill={COLORS.primaryDark} />
             }
-          }}
-        />
+          />
+        </TouchableOpacity>
 
         <AppTextInput
           label="Gmail"
@@ -208,29 +283,112 @@ const AddStaffScreen = ({navigation, route}) => {
           editable={isCreate || isEditing || mode === 'edit'}
         />
 
-        <AppTextInput
-          label="Date of joining"
-          placeholder="Select date of joining"
-          value={formData.joiningDate}
-          editable={false}
-          rightIcon={
-            <Calendar width={24} height={24} fill={COLORS.primaryDark} />
-          }
-          onRightIconPress={() => {
-            if (!isView) {
-              setDateField('joiningDate');
-              setTempDate(
-                formData.joiningDate
-                  ? new Date(
-                      `20${formData.joiningDate.slice(-2)}`,
-                      parseInt(formData.joiningDate.slice(3, 5), 10) - 1,
-                      parseInt(formData.joiningDate.slice(0, 2), 10),
-                    )
-                  : new Date(),
-              );
-              setShowDatePicker(true);
+        <TouchableOpacity
+          onPress={() => handleDatePress('joiningDate')}
+          disabled={isView}>
+          <AppTextInput
+            label="Date of joining"
+            placeholder="Select date of joining"
+            value={formData.joiningDate}
+            editable={false}
+            rightIcon={
+              <Calendar width={24} height={24} fill={COLORS.primaryDark} />
             }
-          }}
+          />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => setShowHubModal(true)}
+          disabled={isView}>
+          <AppTextInput
+            label="Joining HUB"
+            placeholder="Select from dropdown menu"
+            value={formData.hub?.hubName || ''}
+            editable={false}
+            rightIcon={
+              <Calendar width={24} height={24} fill={COLORS.primaryDark} />
+            }
+          />
+        </TouchableOpacity>
+
+        <AppTextInput
+          label="Beneficiary Name"
+          placeholder="Enter beneficiary name"
+          value={formData.beneficiaryName}
+          onChangeText={val => handleChange('beneficiaryName', val)}
+          editable={isCreate || isEditing || mode === 'edit'}
+        />
+
+        <AppTextInput
+          label="Account Number*"
+          placeholder="Enter account number"
+          value={formData.accountNumber}
+          onChangeText={val => handleChange('accountNumber', val)}
+          keyboardType="number-pad"
+          editable={isCreate || isEditing || mode === 'edit'}
+        />
+
+        <AppTextInput
+          label="IFSC"
+          placeholder="Enter IFSC code"
+          value={formData.ifsc}
+          onChangeText={val => handleChange('ifsc', val)}
+          autoCapitalize="characters"
+          editable={isCreate || isEditing || mode === 'edit'}
+        />
+
+        <AppTextInput
+          label="Bank Name"
+          placeholder="Enter bank name"
+          value={formData.bankName}
+          onChangeText={val => handleChange('bankName', val)}
+          editable={isCreate || isEditing || mode === 'edit'}
+        />
+
+        <AppTextInput
+          label="Account Username"
+          placeholder="Enter account username"
+          value={formData.accountUsername}
+          onChangeText={val => handleChange('accountUsername', val)}
+          editable={isCreate || isEditing || mode === 'edit'}
+        />
+
+        <AppTextInput
+          label="Password"
+          placeholder="Enter password"
+          value={formData.accountPassword}
+          onChangeText={val => handleChange('accountPassword', val)}
+          secureTextEntry
+          editable={isCreate || isEditing || mode === 'edit'}
+        />
+
+        <View style={styles.toggleContainer}>
+          <AppText style={styles.toggleLabel}>Account Activation</AppText>
+          <Switch
+            value={formData.isAccountActive}
+            onValueChange={val => handleChange('isAccountActive', val)}
+            disabled={isView}
+            trackColor={{false: '#767577', true: COLORS.primaryColor}}
+            thumbColor={formData.isAccountActive ? '#fff' : '#f4f3f4'}
+          />
+        </View>
+
+        <AppTextInput
+          label="Per FWD Price"
+          placeholder="Enter FWD price"
+          value={formData.perFwd}
+          onChangeText={val => handleChange('perFwd', val)}
+          keyboardType="numeric"
+          editable={isCreate || isEditing || mode === 'edit'}
+        />
+
+        <AppTextInput
+          label="Per RVP Price"
+          placeholder="Enter RVP price"
+          value={formData.perRvp}
+          onChangeText={val => handleChange('perRvp', val)}
+          keyboardType="numeric"
+          editable={isCreate || isEditing || mode === 'edit'}
         />
 
         <View style={styles.buttonContainer}>
@@ -257,6 +415,40 @@ const AddStaffScreen = ({navigation, route}) => {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      <Modal
+        visible={showHubModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowHubModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <AppText style={styles.modalTitle}>Select HUB</AppText>
+              <TouchableOpacity onPress={() => setShowHubModal(false)}>
+                <AppText style={styles.closeButton}>✕</AppText>
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.modalContent}>
+              {hubs && hubs.length > 0 ? (
+                hubs.map((hub, idx) => (
+                  <TouchableOpacity
+                    key={hub.id || idx}
+                    style={styles.hubItem}
+                    onPress={() => {
+                      handleChange('hub', { hubId: hub.id, hubName: hub.hubName });
+                      setShowHubModal(false);
+                    }}>
+                    <AppText>{hub.hubName || hub.hubCode || 'Unnamed Hub'}</AppText>
+                  </TouchableOpacity>
+                ))
+              ) : (
+                <AppText style={{textAlign: 'center', padding: 10}}>No hubs available</AppText>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
 
       <DatePicker
         modal
@@ -298,6 +490,54 @@ const styles = StyleSheet.create({
     borderRadius: RPH(20),
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  toggleContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: RHA(10),
+  },
+  toggleLabel: {
+    fontFamily: 'Poppins',
+    fontSize: RHA(18),
+    lineHeight: RHA(27),
+    color: '#000000',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContainer: {
+    width: '80%',
+    maxHeight: '80%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    padding: RHA(20),
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: RHA(20),
+  },
+  modalTitle: {
+    fontSize: RHA(18),
+    fontWeight: '600',
+  },
+  closeButton: {
+    fontSize: RHA(20),
+    color: '#666',
+  },
+  modalContent: {
+    maxHeight: '80%',
+  },
+  hubItem: {
+    padding: RHA(15),
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5E5',
   },
 });
 

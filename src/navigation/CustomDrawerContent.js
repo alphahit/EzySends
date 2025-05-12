@@ -90,7 +90,11 @@ const CustomDrawerContent = props => {
               fill={state.index === 1 ? '#FFFFFF' : '#282828'}
             />
           }
-          onPress={() => props.navigation.navigate('Staff Database')}
+          onPress={() => {
+            props.navigation.navigate('Staff Database', {
+              screen: 'StaffTable'
+            });
+          }}
           isActive={state.index === 1}
         />
 
@@ -103,7 +107,11 @@ const CustomDrawerContent = props => {
               fill={state.index === 2 ? '#FFFFFF' : '#282828'}
             />
           }
-          onPress={() => props.navigation.navigate('Hub Database')}
+          onPress={() => {
+            props.navigation.navigate('Hub Database', {
+              screen: 'HubTable'
+            });
+          }}
           isActive={state.index === 2}
         />
       </View>

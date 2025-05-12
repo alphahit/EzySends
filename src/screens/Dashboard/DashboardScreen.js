@@ -1,5 +1,5 @@
-import { DrawerActions } from '@react-navigation/native';
-import React, { useState } from 'react';
+import {DrawerActions} from '@react-navigation/native';
+import React, {useEffect, useState} from 'react';
 import {
   Alert,
   SafeAreaView,
@@ -7,6 +7,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   View,
+  RefreshControl,
 } from 'react-native';
 import Drawer from '../../assets/svg/drawer.svg';
 import FwdIcon from '../../assets/svg/fwd.svg';
@@ -19,12 +20,56 @@ import AppHeader from '../../components/AppHeader/AppHeader';
 import AppText from '../../components/AppText/AppText';
 import ConfirmModal from '../../components/ConfirmModal/ConfirmModal';
 import DashboardBox from '../../components/DashboardBox/DashboardBox';
-import { COLORS, FONTS, RH, RHA, RPH } from '../../theme';
+import {COLORS, FONTS, RH, RHA, RPH} from '../../theme';
+import {getStaffDataFromFirestore} from '../../firebase/firebaseFunctions';
+import FilterButton from '../../components/FilterButton';
+import { useSelector, useDispatch } from 'react-redux';
+import { fetchHubs } from '../../store/hubSlice';
+import FilterHubButton from '../../components/FilterHubButton/FilterHubButton';
+
 // For the icons, we would typically import them from a library like react-native-vector-icons
 // For this example, I'll create placeholders
 
 const DashboardScreen = ({navigation}) => {
   const [isModalVisible, setModalVisible] = useState(false);
+  const [staftData, setStaffData] = useState([]);
+  const [currentDateTime, setCurrentDateTime] = useState(new Date());
+  const [refreshing, setRefreshing] = useState(false);
+  const dispatch = useDispatch();
+  const { hubs, loading: hubsLoading } = useSelector(state => state.hub);
+  const [selectedHub, setSelectedHub] = useState('');
+
+  // Fetch all hubs when dashboard mounts
+  useEffect(() => {
+    dispatch(fetchHubs());
+  }, [dispatch]);
+
+  // Update date and time every second
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentDateTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  // Format date and time
+  const formatDate = date => {
+    return date.toLocaleDateString('en-US', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  };
+
+  const formatTime = date => {
+    return date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    });
+  };
 
   const handleLogout = () => {
     // perform your logout logic here
@@ -37,9 +82,9 @@ const DashboardScreen = ({navigation}) => {
     navigation.dispatch(DrawerActions.toggleDrawer());
   };
 
-  const handleNotificationsPress = () => {
-    Alert.alert('Notifications Pressed!');
-  };
+  // const handleNotificationsPress = () => {
+  //   Alert.alert('Notifications Pressed!');
+  // };
 
   const navigateToAddStaff = () => {
     navigation.navigate('Staff Database', {
@@ -52,7 +97,27 @@ const DashboardScreen = ({navigation}) => {
       screen: 'AddHub',
     });
   };
+  const handlegetStaffData = async () => {
+    try {
+      const res = await getStaffDataFromFirestore();
+      console.log('Staff Data:', res);
+      if (res?.length > 0) {
+        setStaffData(res);
+      }
+    } catch (error) {
+      console.error('Error fetching staff data:', error);
+      Alert.alert('Error', 'Failed to fetch staff data.');
+    }
+  };
+  useEffect(() => {
+    handlegetStaffData();
+  }, []);
 
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await handlegetStaffData();
+    setRefreshing(false);
+  };
   return (
     <SafeAreaView style={styles.container}>
       <AppHeader
@@ -71,12 +136,32 @@ const DashboardScreen = ({navigation}) => {
       />
       <ScrollView
         contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}>
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+          />
+        }
+      >
+        <View style={styles.filterContainer}>
+          <FilterHubButton
+            hubNames={hubs.map(hub => hub.hubName)}
+            selectedHub={selectedHub}
+            setSelectedHub={setSelectedHub}
+          />
+          <FilterButton />
+        </View>
+
         {/* Dashboard Stats Row 1 */}
         <View style={styles.statsRow}>
           <DashboardBox
             title="Staff"
-            value="380"
+            value={
+              selectedHub
+                ? staftData.filter(staff => staff.hub?.hubName === selectedHub).length
+                : staftData.length
+            }
             icon={
               <StaffIcon
                 width={iconSize}
@@ -150,7 +235,7 @@ const DashboardScreen = ({navigation}) => {
             }}
           />
 
-          <View style={{width: '47%', gap: RHA(16)}}>
+          <View style={{width: '47%', justifyContent: 'space-between'}}>
             <TouchableOpacity
               style={styles.fabButton}
               onPress={navigateToAddStaff}>
@@ -178,12 +263,16 @@ const DashboardScreen = ({navigation}) => {
         <View style={[styles.dtcontainer]}>
           <View>
             <AppText style={styles.dateText}>Date</AppText>
-            <AppText style={styles.dateText}>12 Aug 2025</AppText>
+            <AppText style={styles.dateText}>
+              {formatDate(currentDateTime)}
+            </AppText>
           </View>
 
           <View>
             <AppText style={styles.dateText}>TimeStamp</AppText>
-            <AppText style={styles.timeText}>12:00:25</AppText>
+            <AppText style={styles.timeText}>
+              {formatTime(currentDateTime)}
+            </AppText>
           </View>
         </View>
       </ScrollView>
@@ -221,7 +310,11 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     padding: RPH(20),
   },
-
+  filterContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: RHA(20),
+  },
   statsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

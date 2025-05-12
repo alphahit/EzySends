@@ -53,6 +53,43 @@ const StaffDetail = ({navigation, route}) => {
   const [showLossModal, setShowLossModal] = useState(false);
   const [lossAmount, setLossAmount] = useState('');
 
+  // --- DUMMY DATA REMOVED ---
+  // Table data will be managed elsewhere; here we assume it comes from props or state.
+  // For now, let's assume a placeholder for tableRows as an empty array.
+  const [tableRows, setTableRows] = useState([]); // TODO: Replace with actual data fetching logic
+
+  // Filtering logic based on date range
+  function isWithinRange(dateStr) {
+    if (!start && !end) return true;
+    const [dd, mm, yyyy] = dateStr.split('-');
+    const date = new Date(`${yyyy}-${mm}-${dd}`);
+    let startDate = start ? new Date(start.split('-').reverse().join('-')) : null;
+    let endDate = end ? new Date(end.split('-').reverse().join('-')) : null;
+    if (startDate && date < startDate) return false;
+    if (endDate && date > endDate) return false;
+    return true;
+  }
+  const filteredRows = tableRows.filter(row => isWithinRange(row.date));
+
+  // Calculation logic
+  const sumFwd = filteredRows.reduce((sum, row) => sum + (parseInt(row.fwd) || 0), 0);
+  const sumRvp = filteredRows.reduce((sum, row) => sum + (parseInt(row.rvp) || 0), 0);
+  const sumAdvance = filteredRows.reduce((sum, row) => sum + (parseInt((row.advance || '').replace('₹', '')) || 0), 0);
+  const sumLoss = filteredRows.reduce((sum, row) => sum + (parseInt((row.loss || '').replace('₹', '')) || 0), 0);
+  const payout = (sumFwd * 13) + (sumRvp * 13);
+  const tds = Math.round(payout * 0.01);
+  const total = payout - tds - sumAdvance;
+
+  // For the footer
+  const footerData = {
+    fwd: sumFwd,
+    rvp: sumRvp,
+    advance: sumAdvance,
+    loss: sumLoss,
+    tds: tds,
+    finalPayout: total,
+  };
+
   // Calculate appropriate column widths based on available space
   const getColumnWidths = availableWidth => {
     // Proportions derived from the original RPH() values (29, 79, 39, 37, 62.33, 74, 50.67)
@@ -181,21 +218,26 @@ const StaffDetail = ({navigation, route}) => {
   const handleProfilePress = () => {
     navigation.navigate('AddStaff', {
       mode: 'view',
-      editData: staffData,
+      editData: {
+        ...staffData,
+        // Include all the new fields
+        hub: staffData.hub || '',
+        beneficiaryName: staffData.beneficiaryName || '',
+        accountNumber: staffData.accountNumber || '',
+        ifsc: staffData.ifsc || '',
+        bankName: staffData.bankName || '',
+        accountUsername: staffData.accountUsername || '',
+        accountPassword: staffData.accountPassword || '',
+        isAccountActive: staffData.isAccountActive || false,
+        perFwd: staffData.perFwd || '',
+        perRvp: staffData.perRvp || '',
+      },
     });
   };
 
   const iconSize = RPH(24);
 
-  // Data for the footer
-  const footerData = {
-    fwd: 516,
-    rvp: 312,
-    tds: 300,
-    loss: 60,
-    advance: 8000,
-    finalPayout: 4000,
-  };
+
   const pickStart = async () => {
     // e.g. open a date picker...
     // const chosen = await showDatePicker();
@@ -264,6 +306,8 @@ const StaffDetail = ({navigation, route}) => {
             </AppText>
           </View>
         </View>
+
+        
 
         <View style={styles.filterButtonsContainer}>
           <FilterButton />
@@ -345,7 +389,7 @@ const StaffDetail = ({navigation, route}) => {
                 size={SIZES.xs}
                 color={COLORS.whiteText}
                 style={[styles.textCenter]}>
-                Loss - ₹{footerData.tds}
+                Loss - ₹{footerData.loss}
               </AppText>
 
               <AppText
@@ -897,6 +941,43 @@ const styles = StyleSheet.create({
     fontSize: RHA(16),
     lineHeight: RHA(24),
     color: '#282828',
+  },
+
+  bankDetailsContainer: {
+    backgroundColor: '#FFFFFF',
+    padding: RHA(15),
+    borderRadius: 8,
+    marginTop: RHA(20),
+    marginHorizontal: RPH(20),
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  sectionTitle: {
+    fontFamily: FONTS.PB,
+    fontSize: RHA(18),
+    color: COLORS.tableTextDark,
+    marginBottom: RHA(10),
+  },
+  bankInfoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: RHA(5),
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5E5',
+  },
+  bankLabel: {
+    fontFamily: FONTS.PR,
+    fontSize: RHA(14),
+    color: COLORS.tableTextDark,
+  },
+  bankValue: {
+    fontFamily: FONTS.PM,
+    fontSize: RHA(14),
+    color: COLORS.tableTextDark,
   },
 });
 

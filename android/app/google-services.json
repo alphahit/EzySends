@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "565414427591",
+    "project_id": "ezy-sends",
+    "storage_bucket": "ezy-sends.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:565414427591:android:89fcebebbeb53a5bb437e2",
+        "android_client_info": {
+          "package_name": "com.ezysends"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAJnNwbPmu63cRtbwyqkCSN01uL2Dh5hho"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

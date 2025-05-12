@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, {useState} from 'react';
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
@@ -12,25 +13,57 @@ import {
 import AppLogo from '../../assets/svg/appLogo.svg';
 import AppButton from '../../components/AppButton/AppButton';
 import AppText from '../../components/AppText/AppText';
-import { COLORS } from '../../theme/colors';
-import { FONTS, RH, RHA, RPH, RW, SIZES } from '../../theme/fonts';
+import {COLORS} from '../../theme/colors';
+import {FONTS, RH, RHA, RPH, RW, SIZES} from '../../theme/fonts';
+import {
+  createUserWithEmailAndPassword,
+  getAuth,
+  signInWithEmailAndPassword,
+} from '@react-native-firebase/auth';
+import {useDispatch} from 'react-redux';
+import { loginSuccess } from '../../store/loginSlice';
 
 const LoginScreen = ({navigation}) => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-
-  const handleLogin = () => {
-    // Implement login functionality
-    console.log('Login with:', username, password);
-    // Navigate to MainApp instead of Dashboard
-    navigation.reset({
-      index: 0,
-      routes: [{name: 'MainApp'}],
-    });
+  const [username, setUsername] = useState('admin@gmail.com');
+  const [password, setPassword] = useState('123456');
+  const dispatch = useDispatch();
+  // console.log("hello")
+  const handleLogin = async () => {
+    if (!username || !password) {
+      Alert.alert('Error', 'Please fill in both email and password.');
+      return;
+    }
+    console.log('AURH');
+    try {
+      const auth = getAuth();
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        username,
+        password,
+      );
+      console.log('User logged in:', userCredential.user);
+      // console.log('User ID:', userCredential.user.uid);
+      // console.log('User Email:', userCredential.user.email);
+      if (userCredential?.user?.email) {
+        dispatch(
+          loginSuccess({
+            // accessToken: userCredential.user.stsTokenManager.accessToken,
+            userId: userCredential?.user?.uid,
+            userEmail: userCredential?.user?.email,
+          })
+        );
+        navigation.reset({
+          index: 0,
+          routes: [{name: 'MainApp'}],
+        });
+      }
+    } catch (error) {
+      console.log('Login error:', error.message);
+    }
   };
-  const handleDragAndDropPress = () => {
-    navigation.navigate('DragAndDrop');
-  };
+  // const handleDragAndDropPress = () => {
+  //   navigation.navigate('DragAndDrop');
+  // };
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
@@ -43,10 +76,10 @@ const LoginScreen = ({navigation}) => {
           <View style={styles.logoContainer}>
             {/* Logo will be added here */}
             <AppLogo
-            width={RPH(109)}
-            height={RHA(80)}
-            fill={COLORS.tableTextDark} // Match color if needed
-          />
+              width={RPH(109)}
+              height={RHA(80)}
+              fill={COLORS.tableTextDark} // Match color if needed
+            />
 
             <View style={styles.logoTextContainer}>
               <AppText
@@ -56,10 +89,7 @@ const LoginScreen = ({navigation}) => {
                 style={styles.companyName}>
                 EZY SENDS
               </AppText>
-              <AppText
-                size={SIZES.xs}
-                color="#565656"
-                style={styles.tagline}>
+              <AppText size={SIZES.xs} color="#565656" style={styles.tagline}>
                 YOUR PACKAGE OUR PRIORITY
               </AppText>
             </View>
@@ -77,9 +107,7 @@ const LoginScreen = ({navigation}) => {
             <View style={styles.inputContainer}>
               {/* Username/Email Input */}
               <View style={styles.inputFieldContainer}>
-                <AppText
-                  style={styles.inputLabel}
-                  size={SIZES.m}>
+                <AppText style={styles.inputLabel} size={SIZES.m}>
                   Username/Email
                 </AppText>
                 <View style={styles.inputWrapper}>
@@ -95,9 +123,7 @@ const LoginScreen = ({navigation}) => {
 
               {/* Password Input */}
               <View style={styles.inputFieldContainer}>
-                <AppText
-                  style={styles.inputLabel}
-                  size={SIZES.m}>
+                <AppText style={styles.inputLabel} size={SIZES.m}>
                   Password
                 </AppText>
                 <View style={styles.inputWrapper}>
@@ -113,12 +139,12 @@ const LoginScreen = ({navigation}) => {
               </View>
 
               {/* Reset Password Link */}
-              <TouchableOpacity onPress={()=>{
-                navigation.navigate("ResetPassword");
-              }} style={styles.resetPasswordContainer}>
-                <AppText
-                  size={SIZES.s}
-                  style={styles.resetPasswordText}>
+              <TouchableOpacity
+                onPress={() => {
+                  navigation.navigate('ResetPassword');
+                }}
+                style={styles.resetPasswordContainer}>
+                <AppText size={SIZES.s} style={styles.resetPasswordText}>
                   Reset Password?
                 </AppText>
               </TouchableOpacity>
@@ -227,7 +253,7 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   loginButtonWrapper: {
-    marginTop: 'auto', 
+    marginTop: 'auto',
     marginBottom: RHA(30),
   },
   loginButtonText: {
