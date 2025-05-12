@@ -61,9 +61,9 @@ const LoginScreen = ({navigation}) => {
       console.log('Login error:', error.message);
     }
   };
-  const handleDragAndDropPress = () => {
-    navigation.navigate('DragAndDrop');
-  };
+  // const handleDragAndDropPress = () => {
+  //   navigation.navigate('DragAndDrop');
+  // };
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView

@@ -1,11 +1,26 @@
-import firestore from '@react-native-firebase/firestore';
-import {Alert} from 'react-native';
+import { getApp } from '@react-native-firebase/app';
+import {
+  getFirestore,
+  collection,
+  getDocs,
+  addDoc,
+  updateDoc,
+  doc
+} from '@react-native-firebase/firestore';
+import { Alert } from 'react-native';
 
-export const saveStaffDataToFirestore = async staffData => {
+// Initialize Firestore using the default Firebase app
+const app = getApp();
+const db = getFirestore(app);
+
+/**
+ * Save a new staff entry to the Firestore 'staff' collection.
+ * @param {Object} staffData - The staff data object to save.
+ */
+export const saveStaffDataToFirestore = async (staffData) => {
   try {
-    // Add the staff data to the "staff" collection in Firestore
-    const staffRef = firestore().collection('staff');
-    await staffRef.add(staffData);
+    // Use modular API: addDoc(collection(db, 'staff'), data)
+    await addDoc(collection(db, 'staff'), staffData);
     console.log('Staff data saved successfully!');
     Alert.alert('Success', 'Staff data saved successfully!');
   } catch (error) {
@@ -13,11 +28,14 @@ export const saveStaffDataToFirestore = async staffData => {
     Alert.alert('Error', 'Failed to save staff data. Please try again.');
   }
 };
-export const saveHubDataToFirestore = async hubData => {
+
+/**
+ * Save a new hub entry to the Firestore 'hubs' collection.
+ * @param {Object} hubData - The hub data object to save.
+ */
+export const saveHubDataToFirestore = async (hubData) => {
   try {
-    // Add the hub data to the "hubs" collection in Firestore
-    const hubRef = firestore().collection('hubs');
-    await hubRef.add(hubData);
+    await addDoc(collection(db, 'hubs'), hubData);
     console.log('Hub data saved successfully!');
     Alert.alert('Success', 'Hub data saved successfully!');
   } catch (error) {
@@ -25,47 +43,54 @@ export const saveHubDataToFirestore = async hubData => {
     Alert.alert('Error', 'Failed to save hub data. Please try again.');
   }
 };
+
+/**
+ * Fetch all staff data from the Firestore 'staff' collection.
+ * @returns {Promise<Array>} Array of staff objects, each with a Firestore docId.
+ */
 export const getStaffDataFromFirestore = async () => {
   try {
-    const staffRef = firestore().collection('staff');
-    const snapshot = await staffRef.get();
-    const staffData = snapshot.docs.map((doc, index) => ({
-      id: (index + 1).toString(),
-      name: doc.data().name,
-      perFwd: '₹13', // Default value, can be updated later
-      perRvp: '₹13', // Default value, can be updated later
-      hub: 'ESY003', // Default value, can be updated later
-      ...doc.data(),
-      docId: doc.id // Store the Firestore document ID
+    // Get all documents in 'staff'
+    const snapshot = await getDocs(collection(db, 'staff'));
+    return snapshot.docs.map((docSnap, index) => ({
+      id: (index + 1).toString(),    // UI-friendly numeric ID
+      docId: docSnap.id,             // Firestore document ID
+      ...docSnap.data(),             // Spread stored fields
     }));
-    return staffData;
   } catch (error) {
     console.error('Error fetching staff data:', error.message);
     return [];
   }
 };
+
+/**
+ * Fetch all hub data from the Firestore 'hubs' collection.
+ * @returns {Promise<Array>} Array of hub objects, each with a Firestore docId.
+ */
 export const getHubDataFromFirestore = async () => {
   try {
-    const hubRef = firestore().collection('hubs');
-    const snapshot = await hubRef.get();
-    const hubData = snapshot.docs.map((doc, index) => ({
+    const snapshot = await getDocs(collection(db, 'hubs'));
+    return snapshot.docs.map((docSnap, index) => ({
       id: (index + 1).toString(),
-      hubName: doc.data().hubName,
-      hubCode: doc.data().hubCode,
-      totalStaff: '0', // This can be calculated later based on staff count
-      ...doc.data(),
-      docId: doc.id // Store the Firestore document ID
+      docId: docSnap.id,
+      ...docSnap.data(),
     }));
-    return hubData;
   } catch (error) {
     console.error('Error fetching hub data:', error.message);
     return [];
   }
 };
+
+/**
+ * Update an existing staff document in Firestore.
+ * @param {string} staffId - Firestore document ID for the staff entry.
+ * @param {Object} staffData - The staff data to update.
+ */
 export const updateStaffDataInFirestore = async (staffId, staffData) => {
   try {
-    const staffRef = firestore().collection('staff').doc(staffId);
-    await staffRef.update(staffData);
+    // Reference a specific document then update
+    const staffDocRef = doc(db, 'staff', staffId);
+    await updateDoc(staffDocRef, staffData);
     console.log('Staff data updated successfully!');
     Alert.alert('Success', 'Staff data updated successfully!');
   } catch (error) {
@@ -73,10 +98,16 @@ export const updateStaffDataInFirestore = async (staffId, staffData) => {
     Alert.alert('Error', 'Failed to update staff data. Please try again.');
   }
 };
+
+/**
+ * Update an existing hub document in Firestore.
+ * @param {string} hubId - Firestore document ID for the hub entry.
+ * @param {Object} hubData - The hub data to update.
+ */
 export const updateHubDataInFirestore = async (hubId, hubData) => {
   try {
-    const hubRef = firestore().collection('hubs').doc(hubId);
-    await hubRef.update(hubData);
+    const hubDocRef = doc(db, 'hubs', hubId);
+    await updateDoc(hubDocRef, hubData);
     console.log('Hub data updated successfully!');
     Alert.alert('Success', 'Hub data updated successfully!');
   } catch (error) {

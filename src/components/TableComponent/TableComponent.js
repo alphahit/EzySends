@@ -68,8 +68,12 @@ const TableRow = ({
       onPress={() => onRowPress && onRowPress(item, index)}
       onLongPress={() => onRowLongPress && onRowLongPress(item, index)}>
       {columns.map((column, columnIndex) => {
-        const cellValue = item[column.key];
-        const isMultiline = cellValue && cellValue.length > 15;
+        let cellValue = item[column.key];
+        // If the value is an object (e.g., hub), display hubName or hubCode
+        if (cellValue && typeof cellValue === 'object' && (cellValue.hubName || cellValue.hubCode)) {
+          cellValue = cellValue.hubName || cellValue.hubCode || '';
+        }
+        const isMultiline = cellValue && typeof cellValue === 'string' && cellValue.length > 15;
         
         return (
           <View

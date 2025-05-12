@@ -3,9 +3,11 @@ import { persistReducer, persistStore, FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, 
 import thunk from 'redux-thunk';
 import { reduxStorage } from './storage';
 import loginReducer from './loginSlice';
+import hubReducer from './hubSlice';
 
 const rootReducer = combineReducers({
   login: loginReducer,
+  hub: hubReducer,
 });
 
 const persistConfig = {

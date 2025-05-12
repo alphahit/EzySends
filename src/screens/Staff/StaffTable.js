@@ -61,10 +61,11 @@ const StaffTable = ({navigation}) => {
     // Distribute proportionally (approximate percentages)
     return {
       id: Math.floor(availableWidth * 0.08), // 8% for ID column
-      name: Math.floor(availableWidth * 0.32), // 32% for Name column
-      perFwd: Math.floor(availableWidth * 0.2), // 20% for Per FWD
-      perRvp: Math.floor(availableWidth * 0.2), // 20% for Per RVP
-      hub: Math.floor(availableWidth * 0.2), // 20% for HUB
+      name: Math.floor(availableWidth * 0.32), // 25% for Name column
+      perFwd: Math.floor(availableWidth * 0.20), // 15% for Per FWD
+      perRvp: Math.floor(availableWidth * 0.20), // 15% for Per RVP
+      hub: Math.floor(availableWidth * 0.20), // 15% for HUB
+
     };
   };
 

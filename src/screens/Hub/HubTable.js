@@ -17,7 +17,8 @@ import Drawer from '../../assets/svg/drawer.svg';
 import SearchIcon from '../../assets/svg/search.svg';
 import {DrawerActions} from '@react-navigation/native';
 import PlusWhite from '../../assets/svg/plusWhite.svg';
-import {getHubDataFromFirestore} from '../../firebase/firebaseFunctions';
+import { useSelector, useDispatch } from 'react-redux';
+import { fetchHubs } from '../../store/hubSlice';
 
 // Get screen width for calculations
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -25,36 +26,19 @@ const SCREEN_WIDTH = Dimensions.get('window').width;
 const HubTable = ({navigation}) => {
   const [containerWidth, setContainerWidth] = useState(SCREEN_WIDTH - RW(40)); // Account for screen padding
   const [searchText, setSearchText] = useState('');
+  const dispatch = useDispatch();
+  const { hubs, loading } = useSelector(state => state.hub);
   const [filteredData, setFilteredData] = useState([]);
-  const [hubData, setHubData] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch hub data when component mounts and when screen comes into focus
+  // Fetch hubs from Redux slice when component mounts or screen is focused
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
-      fetchHubData();
+      dispatch(fetchHubs());
     });
-
     // Initial fetch
-    fetchHubData();
-
-    // Cleanup subscription
+    dispatch(fetchHubs());
     return unsubscribe;
-  }, [navigation]);
-
-  const fetchHubData = async () => {
-    try {
-      setIsLoading(true);
-      const data = await getHubDataFromFirestore();
-      setHubData(data);
-      setFilteredData(data);
-    } catch (error) {
-      console.error('Error fetching hub data:', error);
-      Alert.alert('Error', 'Failed to fetch hub data');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }, [navigation, dispatch]);
 
   // Calculate column widths
   const getColumnWidths = availableWidth => ({
@@ -76,13 +60,14 @@ const HubTable = ({navigation}) => {
   ];
 
   // Filter logic
+  // Filter logic (operates on Redux state)
   const filterData = useCallback(() => {
     if (!searchText.trim()) {
-      setFilteredData(hubData);
+      setFilteredData(hubs);
     } else {
       const lc = searchText.toLowerCase();
       setFilteredData(
-        hubData.filter(
+        hubs.filter(
           item =>
             item.hubName.toLowerCase().includes(lc) ||
             item.hubCode.toLowerCase().includes(lc) ||
@@ -90,9 +75,9 @@ const HubTable = ({navigation}) => {
         ),
       );
     }
-  }, [searchText, hubData]);
+  }, [searchText, hubs]);
 
-  // Apply filter when search text changes
+  // Apply filter when search text or hubs change
   useEffect(() => {
     filterData();
   }, [filterData]);
@@ -188,7 +173,7 @@ const HubTable = ({navigation}) => {
             onRowLongPress={handleRowLongPress}
             scrollEnabled={false}
             containerWidth={containerWidth}
-            isLoading={isLoading}
+            isLoading={loading}
           />
         </View>
       </ScrollView>
