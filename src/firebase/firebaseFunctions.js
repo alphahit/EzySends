@@ -29,7 +29,15 @@ export const getStaffDataFromFirestore = async () => {
   try {
     const staffRef = firestore().collection('staff');
     const snapshot = await staffRef.get();
-    const staffData = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
+    const staffData = snapshot.docs.map((doc, index) => ({
+      id: (index + 1).toString(),
+      name: doc.data().name,
+      perFwd: '₹13', // Default value, can be updated later
+      perRvp: '₹13', // Default value, can be updated later
+      hub: 'ESY003', // Default value, can be updated later
+      ...doc.data(),
+      docId: doc.id // Store the Firestore document ID
+    }));
     return staffData;
   } catch (error) {
     console.error('Error fetching staff data:', error.message);
@@ -40,10 +48,39 @@ export const getHubDataFromFirestore = async () => {
   try {
     const hubRef = firestore().collection('hubs');
     const snapshot = await hubRef.get();
-    const hubData = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
+    const hubData = snapshot.docs.map((doc, index) => ({
+      id: (index + 1).toString(),
+      hubName: doc.data().hubName,
+      hubCode: doc.data().hubCode,
+      totalStaff: '0', // This can be calculated later based on staff count
+      ...doc.data(),
+      docId: doc.id // Store the Firestore document ID
+    }));
     return hubData;
   } catch (error) {
     console.error('Error fetching hub data:', error.message);
     return [];
+  }
+};
+export const updateStaffDataInFirestore = async (staffId, staffData) => {
+  try {
+    const staffRef = firestore().collection('staff').doc(staffId);
+    await staffRef.update(staffData);
+    console.log('Staff data updated successfully!');
+    Alert.alert('Success', 'Staff data updated successfully!');
+  } catch (error) {
+    console.error('Error updating staff data:', error.message);
+    Alert.alert('Error', 'Failed to update staff data. Please try again.');
+  }
+};
+export const updateHubDataInFirestore = async (hubId, hubData) => {
+  try {
+    const hubRef = firestore().collection('hubs').doc(hubId);
+    await hubRef.update(hubData);
+    console.log('Hub data updated successfully!');
+    Alert.alert('Success', 'Hub data updated successfully!');
+  } catch (error) {
+    console.error('Error updating hub data:', error.message);
+    Alert.alert('Error', 'Failed to update hub data. Please try again.');
   }
 };

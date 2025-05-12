@@ -17,6 +17,7 @@ import AppText from '../../components/AppText/AppText';
 import SearchInput from '../../components/SearchInput';
 import TableComponent from '../../components/TableComponent';
 import { COLORS, RH, RPH, RW } from '../../theme';
+import { getStaffDataFromFirestore } from '../../firebase/firebaseFunctions';
 
 // Get screen width for calculations
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -25,6 +26,35 @@ const StaffTable = ({navigation}) => {
   const [containerWidth, setContainerWidth] = useState(SCREEN_WIDTH - RW(40)); // Account for screen padding
   const [searchText, setSearchText] = useState('');
   const [filteredData, setFilteredData] = useState([]);
+  const [staffData, setStaffData] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch staff data when component mounts and when screen comes into focus
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      fetchStaffData();
+    });
+
+    // Initial fetch
+    fetchStaffData();
+
+    // Cleanup subscription
+    return unsubscribe;
+  }, [navigation]);
+
+  const fetchStaffData = async () => {
+    try {
+      setIsLoading(true);
+      const data = await getStaffDataFromFirestore();
+      setStaffData(data);
+      setFilteredData(data);
+    } catch (error) {
+      console.error('Error fetching staff data:', error);
+      Alert.alert('Error', 'Failed to fetch staff data');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Calculate appropriate column widths based on available space
   const getColumnWidths = availableWidth => {
@@ -70,66 +100,6 @@ const StaffTable = ({navigation}) => {
     },
   ];
 
-  // Sample data for the table (using useMemo to avoid re-creating on each render)
-  const staffData = useMemo(() => [
-    {
-      id: '1',
-      name: 'Ankit Koshre',
-      perFwd: '₹13',
-      perRvp: '₹13',
-      hub: 'ESY003',
-    },
-    {
-      id: '2',
-      name: 'Bharat Bishi',
-      perFwd: '₹13',
-      perRvp: '₹13',
-      hub: 'ESY003',
-    },
-    {
-      id: '3',
-      name: 'Bishal Singh Routray',
-      perFwd: '₹13',
-      perRvp: '₹13',
-      hub: 'ESY003',
-    },
-    {
-      id: '4',
-      name: 'Dayananda Naik',
-      perFwd: '₹13',
-      perRvp: '₹13',
-      hub: 'ESY003',
-    },
-    {
-      id: '5',
-      name: 'Dinesh Kumbhar',
-      perFwd: '₹13',
-      perRvp: '₹13',
-      hub: 'ESY003',
-    },
-    {
-      id: '6',
-      name: 'Gunanidhi Gahir',
-      perFwd: '₹13',
-      perRvp: '₹13',
-      hub: 'ESY003',
-    },
-    {
-      id: '7',
-      name: 'Jitendra Gahir',
-      perFwd: '₹13',
-      perRvp: '₹13',
-      hub: 'ESY003',
-    },
-    {
-      id: '8',
-      name: 'Kamal Kishor Ghivela',
-      perFwd: '₹13',
-      perRvp: '₹13',
-      hub: 'ESY003',
-    },
-  ], []);
-
   // Filter function
   const filterData = useCallback(() => {
     if (!searchText.trim()) {
@@ -140,7 +110,7 @@ const StaffTable = ({navigation}) => {
         return (
           item.name.toLowerCase().includes(lowercasedFilter) ||
           item.id.toLowerCase().includes(lowercasedFilter) ||
-          item.hub.toLowerCase().includes(lowercasedFilter)
+          (item.hub && item.hub.toLowerCase().includes(lowercasedFilter))
         );
       });
       setFilteredData(filtered);
@@ -152,16 +122,9 @@ const StaffTable = ({navigation}) => {
     filterData();
   }, [filterData]);
 
-  // Initialize filtered data on component mount
-  useEffect(() => {
-    setFilteredData(staffData);
-  }, [staffData]);
-
   const handleRowPress = (rowData, index) => {
-    console.log('Row pressed:', rowData);
-    // Navigate to StaffDetail screen with the staff ID
     navigation.navigate('StaffDetail', {
-      staffId: rowData.id,
+      staffId: rowData.docId,
       staffData: rowData,
     });
   };
@@ -173,7 +136,12 @@ const StaffTable = ({navigation}) => {
       [
         {
           text: 'Edit',
-          onPress: () => console.log('Edit pressed for', rowData.name),
+          onPress: () => {
+            navigation.navigate('AddStaff', {
+              mode: 'edit',
+              editData: rowData,
+            });
+          },
         },
         {
           text: 'Delete',
@@ -217,7 +185,7 @@ const StaffTable = ({navigation}) => {
           <Drawer
             width={iconSize}
             height={iconSize}
-            fill={COLORS.tableTextDark} // Control SVG color via fill/stroke props
+            fill={COLORS.tableTextDark}
           />
         }
         onPressLeft={handleMenuPress}
@@ -250,8 +218,9 @@ const StaffTable = ({navigation}) => {
             data={filteredData}
             onRowPress={handleRowPress}
             onRowLongPress={handleRowLongPress}
-            scrollEnabled={false} // Disable scrolling within the table
+            scrollEnabled={false}
             containerWidth={containerWidth}
+            isLoading={isLoading}
           />
         </View>
       </ScrollView>

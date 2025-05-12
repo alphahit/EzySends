@@ -19,7 +19,10 @@ import AppHeader from '../../components/AppHeader/AppHeader';
 import Back from '../../assets/svg/back.svg';
 import Calendar from '../../assets/svg/calendar.svg';
 import {COLORS} from '../../theme/colors';
-import {saveStaffDataToFirestore} from '../../firebase/firebaseFunctions';
+import {
+  saveStaffDataToFirestore,
+  updateStaffDataInFirestore,
+} from '../../firebase/firebaseFunctions';
 
 const AddStaffScreen = ({navigation, route}) => {
   const {mode = 'create', editData} = route.params || {};
@@ -40,11 +43,11 @@ const AddStaffScreen = ({navigation, route}) => {
   const [tempDate, setTempDate] = useState(new Date());
   const [dateField, setDateField] = useState(null);
 
-  // helper to format as "DD-MM-YY"
+  // helper to format as "DD-MM-YYYY"
   const formatDate = date => {
     const d = date.getDate().toString().padStart(2, '0');
     const m = (date.getMonth() + 1).toString().padStart(2, '0');
-    const y = date.getFullYear().toString().slice(-2);
+    const y = date.getFullYear().toString();
     return `${d}-${m}-${y}`;
   };
   useEffect(() => {
@@ -60,6 +63,20 @@ const AddStaffScreen = ({navigation, route}) => {
   const handleChange = (key, value) => {
     if (!isView) {
       setFormData({...formData, [key]: value});
+    }
+  };
+
+  const handleDatePress = (field) => {
+    if (!isView) {
+      setDateField(field);
+      setTempDate(
+        formData[field]
+          ? new Date(
+              formData[field].split('-').reverse().join('-')
+            )
+          : new Date(),
+      );
+      setShowDatePicker(true);
     }
   };
 
@@ -82,13 +99,12 @@ const AddStaffScreen = ({navigation, route}) => {
       panNumber: formData.panNumber,
       aadhaarNumber: formData.aadhaarNumber,
       joiningDate: formData.joiningDate,
-      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
 
     try {
       if (mode === 'create') {
         await saveStaffDataToFirestore(staffData);
-        navigation.goBack();
         setFormData({
           name: '',
           contactNumber: '',
@@ -99,14 +115,32 @@ const AddStaffScreen = ({navigation, route}) => {
           aadhaarNumber: '',
           joiningDate: '',
         });
+        Alert.alert('Success', 'Staff added successfully!', [
+          {
+            text: 'OK',
+            onPress: () => {
+              navigation.navigate('Staff Database', {
+                screen: 'StaffTable'
+              });
+            },
+          },
+        ]);
       } else if (mode === 'edit') {
-        console.log('Staff updated:', formData);
+        await updateStaffDataInFirestore(editData.docId, staffData);
         Alert.alert('Success', 'Staff updated successfully!', [
-          {text: 'OK', onPress: () => navigation.goBack()},
+          {
+            text: 'OK',
+            onPress: () => {
+              navigation.navigate('Staff Database', {
+                screen: 'StaffTable'
+              });
+            },
+          },
         ]);
       }
     } catch (error) {
       console.error('Error handling submit:', error);
+      Alert.alert('Error', 'Failed to save staff data. Please try again.');
     }
   };
 
@@ -177,30 +211,19 @@ const AddStaffScreen = ({navigation, route}) => {
           editable={isCreate || isEditing || mode === 'edit'}
         />
 
-        <AppTextInput
-          label="D.O.B"
-          placeholder="Select date of birth"
-          value={formData.dob}
-          editable={false}
-          rightIcon={
-            <Calendar width={24} height={24} fill={COLORS.primaryDark} />
-          }
-          onRightIconPress={() => {
-            if (!isView) {
-              setDateField('dob');
-              setTempDate(
-                formData.dob
-                  ? new Date(
-                      `20${formData.dob.slice(-2)}`,
-                      parseInt(formData.dob.slice(3, 5), 10) - 1,
-                      parseInt(formData.dob.slice(0, 2), 10),
-                    )
-                  : new Date(),
-              );
-              setShowDatePicker(true);
+        <TouchableOpacity
+          onPress={() => handleDatePress('dob')}
+          disabled={isView}>
+          <AppTextInput
+            label="D.O.B"
+            placeholder="Select date of birth"
+            value={formData.dob}
+            editable={false}
+            rightIcon={
+              <Calendar width={24} height={24} fill={COLORS.primaryDark} />
             }
-          }}
-        />
+          />
+        </TouchableOpacity>
 
         <AppTextInput
           label="Gmail"
@@ -229,30 +252,19 @@ const AddStaffScreen = ({navigation, route}) => {
           editable={isCreate || isEditing || mode === 'edit'}
         />
 
-        <AppTextInput
-          label="Date of joining"
-          placeholder="Select date of joining"
-          value={formData.joiningDate}
-          editable={false}
-          rightIcon={
-            <Calendar width={24} height={24} fill={COLORS.primaryDark} />
-          }
-          onRightIconPress={() => {
-            if (!isView) {
-              setDateField('joiningDate');
-              setTempDate(
-                formData.joiningDate
-                  ? new Date(
-                      `20${formData.joiningDate.slice(-2)}`,
-                      parseInt(formData.joiningDate.slice(3, 5), 10) - 1,
-                      parseInt(formData.joiningDate.slice(0, 2), 10),
-                    )
-                  : new Date(),
-              );
-              setShowDatePicker(true);
+        <TouchableOpacity
+          onPress={() => handleDatePress('joiningDate')}
+          disabled={isView}>
+          <AppTextInput
+            label="Date of joining"
+            placeholder="Select date of joining"
+            value={formData.joiningDate}
+            editable={false}
+            rightIcon={
+              <Calendar width={24} height={24} fill={COLORS.primaryDark} />
             }
-          }}
-        />
+          />
+        </TouchableOpacity>
 
         <View style={styles.buttonContainer}>
           {(isCreate || isEditing || mode === 'edit') && (

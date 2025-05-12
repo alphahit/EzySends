@@ -17,12 +17,19 @@ import AppHeader from '../../components/AppHeader/AppHeader';
 import Back from '../../assets/svg/back.svg';
 import Calendar from '../../assets/svg/calendar.svg';
 import {COLORS} from '../../theme/colors';
-import {saveHubDataToFirestore} from '../../firebase/firebaseFunctions';
+import {
+  saveHubDataToFirestore,
+  updateHubDataInFirestore,
+} from '../../firebase/firebaseFunctions';
+import DatePicker from 'react-native-date-picker';
 
 const AddHubScreen = ({navigation, route}) => {
   const {mode = 'create', editData} = route.params || {};
   // Internal editing state for view mode
   const [isEditing, setIsEditing] = useState(mode === 'edit');
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [tempDate, setTempDate] = useState(new Date());
+  const [dateField, setDateField] = useState(null);
 
   const [formData, setFormData] = useState({
     hubName: '',
@@ -83,12 +90,11 @@ const AddHubScreen = ({navigation, route}) => {
       contactNumber,
       managerName,
       capacity,
-      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
 
     try {
       if (mode === 'create') {
-        // Save new hub data to Firestore
         await saveHubDataToFirestore(hubData);
         setFormData({
           hubName: '',
@@ -101,19 +107,26 @@ const AddHubScreen = ({navigation, route}) => {
         });
 
         Alert.alert('Success', 'Hub added successfully!', [
-          {text: 'OK', onPress: () => navigation.goBack()},
+          {
+            text: 'OK',
+            onPress: () => {
+              navigation.navigate('Hub Database', {
+                screen: 'HubTable'
+              });
+            },
+          },
         ]);
       } else if (mode === 'edit') {
-        // Update existing hub data (you'll need to implement update logic in Firestore)
-        console.log('Hub updated:', hubData);
+        await updateHubDataInFirestore(editData.docId, hubData);
         Alert.alert('Success', 'Hub updated successfully!', [
-          {text: 'OK', onPress: () => navigation.goBack()},
-        ]);
-      } else if (mode === 'view') {
-        // Save after edit
-        console.log('Hub updated:', hubData);
-        Alert.alert('Success', 'Hub updated successfully!', [
-          {text: 'OK', onPress: () => setIsEditing(false)},
+          {
+            text: 'OK',
+            onPress: () => {
+              navigation.navigate('Hub Database', {
+                screen: 'HubTable'
+              });
+            },
+          },
         ]);
       }
     } catch (error) {
@@ -147,6 +160,28 @@ const AddHubScreen = ({navigation, route}) => {
       : isEditing
       ? 'Edit Hub'
       : 'Hub Details';
+
+  const handleDatePress = (field) => {
+    if (!isView) {
+      setDateField(field);
+      setTempDate(
+        formData[field]
+          ? new Date(
+              formData[field].split('-').reverse().join('-')
+            )
+          : new Date(),
+      );
+      setShowDatePicker(true);
+    }
+  };
+
+  // helper to format as "DD-MM-YYYY"
+  const formatDate = date => {
+    const d = date.getDate().toString().padStart(2, '0');
+    const m = (date.getMonth() + 1).toString().padStart(2, '0');
+    const y = date.getFullYear().toString();
+    return `${d}-${m}-${y}`;
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -187,18 +222,19 @@ const AddHubScreen = ({navigation, route}) => {
         />
 
         {/* Starting Date */}
-        <AppTextInput
-          label="Starting Date"
-          placeholder="Select starting date"
-          value={formData.startingDate}
-          editable={false}
-          rightIcon={
-            <Calendar width={24} height={24} fill={COLORS.primaryDark} />
-          }
-          onRightIconPress={() =>
-            !isView && !isCreate && console.log('Open date picker')
-          }
-        />
+        <TouchableOpacity
+          onPress={() => handleDatePress('startingDate')}
+          disabled={isView}>
+          <AppTextInput
+            label="Starting Date"
+            placeholder="Select starting date"
+            value={formData.startingDate}
+            editable={false}
+            rightIcon={
+              <Calendar width={24} height={24} fill={COLORS.primaryDark} />
+            }
+          />
+        </TouchableOpacity>
 
         {/* Location */}
         <AppTextInput
@@ -270,6 +306,18 @@ const AddHubScreen = ({navigation, route}) => {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      <DatePicker
+        modal
+        open={showDatePicker}
+        date={tempDate}
+        mode="date"
+        onConfirm={date => {
+          setShowDatePicker(false);
+          handleChange(dateField, formatDate(date));
+        }}
+        onCancel={() => setShowDatePicker(false)}
+      />
     </SafeAreaView>
   );
 };

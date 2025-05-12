@@ -27,6 +27,35 @@ import {getStaffDataFromFirestore} from '../../firebase/firebaseFunctions';
 const DashboardScreen = ({navigation}) => {
   const [isModalVisible, setModalVisible] = useState(false);
   const [staftData, setStaffData] = useState([]);
+  const [currentDateTime, setCurrentDateTime] = useState(new Date());
+
+  // Update date and time every second
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentDateTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  // Format date and time
+  const formatDate = (date) => {
+    return date.toLocaleDateString('en-US', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    });
+  };
+
+  const formatTime = (date) => {
+    return date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
+  };
+
   const handleLogout = () => {
     // perform your logout logic here
     console.log('Logged out!');
@@ -193,12 +222,12 @@ const DashboardScreen = ({navigation}) => {
         <View style={[styles.dtcontainer]}>
           <View>
             <AppText style={styles.dateText}>Date</AppText>
-            <AppText style={styles.dateText}>12 Aug 2025</AppText>
+            <AppText style={styles.dateText}>{formatDate(currentDateTime)}</AppText>
           </View>
 
           <View>
             <AppText style={styles.dateText}>TimeStamp</AppText>
-            <AppText style={styles.timeText}>12:00:25</AppText>
+            <AppText style={styles.timeText}>{formatTime(currentDateTime)}</AppText>
           </View>
         </View>
       </ScrollView>

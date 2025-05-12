@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useCallback, useMemo} from 'react';
+import React, {useState, useEffect, useCallback} from 'react';
 import {
   View,
   StyleSheet,
@@ -14,10 +14,11 @@ import TableComponent from '../../components/TableComponent';
 import AppHeader from '../../components/AppHeader/AppHeader';
 import SearchInput from '../../components/SearchInput';
 import Drawer from '../../assets/svg/drawer.svg';
-import NotificationIcon from '../../assets/svg/bell.svg';
 import SearchIcon from '../../assets/svg/search.svg';
 import {DrawerActions} from '@react-navigation/native';
 import PlusWhite from '../../assets/svg/plusWhite.svg';
+import {getHubDataFromFirestore} from '../../firebase/firebaseFunctions';
+
 // Get screen width for calculations
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -25,6 +26,35 @@ const HubTable = ({navigation}) => {
   const [containerWidth, setContainerWidth] = useState(SCREEN_WIDTH - RW(40)); // Account for screen padding
   const [searchText, setSearchText] = useState('');
   const [filteredData, setFilteredData] = useState([]);
+  const [hubData, setHubData] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch hub data when component mounts and when screen comes into focus
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      fetchHubData();
+    });
+
+    // Initial fetch
+    fetchHubData();
+
+    // Cleanup subscription
+    return unsubscribe;
+  }, [navigation]);
+
+  const fetchHubData = async () => {
+    try {
+      setIsLoading(true);
+      const data = await getHubDataFromFirestore();
+      setHubData(data);
+      setFilteredData(data);
+    } catch (error) {
+      console.error('Error fetching hub data:', error);
+      Alert.alert('Error', 'Failed to fetch hub data');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Calculate column widths
   const getColumnWidths = availableWidth => ({
@@ -36,6 +66,7 @@ const HubTable = ({navigation}) => {
 
   // Get column widths based on container width
   const columnWidths = getColumnWidths(containerWidth);
+  
   // Table headers
   const headers = [
     {title: '#', key: 'id', width: columnWidths.id},
@@ -43,18 +74,6 @@ const HubTable = ({navigation}) => {
     {title: 'Unique Code', key: 'hubCode', width: columnWidths.hubCode},
     {title: 'Total Staff', key: 'totalStaff', width: columnWidths.totalStaff},
   ];
-
-  // Sample hub data
-  const hubData = useMemo(
-    () => [
-      {id: '1', hubName: 'Khariar', hubCode: 'ESY001', totalStaff: '10'},
-      {id: '2', hubName: 'Kolkata', hubCode: 'ESY002', totalStaff: '15'},
-      {id: '3', hubName: 'Sinapali', hubCode: 'ESY003', totalStaff: '25'},
-      {id: '4', hubName: 'Nuapada', hubCode: 'ESY004', totalStaff: '05'},
-      {id: '5', hubName: 'Karangamal', hubCode: 'ESY005', totalStaff: '05'},
-    ],
-    [],
-  );
 
   // Filter logic
   const filterData = useCallback(() => {
@@ -78,27 +97,27 @@ const HubTable = ({navigation}) => {
     filterData();
   }, [filterData]);
 
-  // Initialize filtered data on component mount
-  useEffect(() => {
-    setFilteredData(hubData);
-  }, [hubData]);
-
   const handleRowPress = row => {
     navigation.navigate('AddHub', {mode: 'view', editData: row});
   };
 
   const handleRowLongPress = (rowData, index) => {
     Alert.alert(
-      'Staff Options',
-      `${rowData.name}`,
+      'Hub Options',
+      `${rowData.hubName}`,
       [
         {
           text: 'Edit',
-          onPress: () => console.log('Edit pressed for', rowData.name),
+          onPress: () => {
+            navigation.navigate('AddHub', {
+              mode: 'edit',
+              editData: rowData,
+            });
+          },
         },
         {
           text: 'Delete',
-          onPress: () => console.log('Delete pressed for', rowData.name),
+          onPress: () => console.log('Delete pressed for', rowData.hubName),
           style: 'destructive',
         },
         {
@@ -134,16 +153,16 @@ const HubTable = ({navigation}) => {
           <Drawer
             width={iconSize}
             height={iconSize}
-            fill={COLORS.tableTextDark} // Control SVG color via fill/stroke props
+            fill={COLORS.tableTextDark}
           />
         }
         onPressLeft={handleMenuPress}
       />
 
-      {/* Staff Search */}
+      {/* Hub Search */}
       <View style={styles.searchContainer}>
         <SearchInput
-          placeholder="Search staff..."
+          placeholder="Search hub..."
           value={searchText}
           onChangeText={setSearchText}
           onClear={handleSearchClear}
@@ -167,8 +186,9 @@ const HubTable = ({navigation}) => {
             data={filteredData}
             onRowPress={handleRowPress}
             onRowLongPress={handleRowLongPress}
-            scrollEnabled={false} // Disable scrolling within the table
+            scrollEnabled={false}
             containerWidth={containerWidth}
+            isLoading={isLoading}
           />
         </View>
       </ScrollView>
